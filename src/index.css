@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+@theme {
+  /* Material You inspired warm palette */
+  --color-surface: #FFFBFE;
+  --color-surface-dim: #F4EFF4;
+  --color-surface-container: #F3EDF7;
+  --color-surface-container-low: #F7F2FA;
+  --color-surface-container-high: #ECE6F0;
+  --color-surface-variant: #E7E0EC;
+
+  --color-primary: #D4795C;
+  --color-primary-light: #FCDDD1;
+  --color-primary-container: #FFE0D6;
+  --color-on-primary: #FFFFFF;
+  --color-on-primary-container: #3B0E00;
+
+  --color-secondary: #77574B;
+  --color-secondary-container: #FFDBD0;
+  --color-on-secondary-container: #2C160D;
+
+  --color-tertiary: #6B5E2F;
+  --color-tertiary-container: #F5E2A7;
+
+  --color-on-surface: #1D1B20;
+  --color-on-surface-variant: #49454F;
+  --color-outline: #79747E;
+  --color-outline-variant: #CAC4D0;
+
+  --color-success: #3B6939;
+  --color-success-container: #BCEDB6;
+
+  --color-error: #BA1A1A;
+  --color-error-container: #FFDAD6;
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Material You style scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: 4px;
+}
+
+/* Animations */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(-100%) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes ripple {
+  to { transform: scale(4); opacity: 0; }
+}
+
+.animate-fade-in {
+  animation: fade-in-up 0.35s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.animate-confetti {
+  animation: confetti-fall 3s ease-in forwards;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+/* Material ripple effect */
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+.ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(0,0,0,0.08) 10%, transparent 10%);
+  background-repeat: no-repeat;
+  background-position: 50%;
+  transform: scale(10);
+  opacity: 0;
+  transition: transform 0.5s, opacity 0.5s;
+}
+.ripple:active::after {
+  transform: scale(0);
+  opacity: 1;
+  transition: 0s;
+}
+
+/* Material elevation */
+.elevation-1 {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);
+}
+.elevation-2 {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.12);
+}
+.elevation-3 {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.15);
+}
