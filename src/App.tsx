@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { HomePage } from '@/pages/HomePage';
 import { ProtocolRunnerPage } from '@/pages/ProtocolRunnerPage';
@@ -8,7 +8,7 @@ import { MoodPage } from '@/pages/MoodPage';
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route element={<AppShell />}>
           <Route path="/" element={<HomePage />} />
@@ -19,7 +19,7 @@ function App() {
         <Route path="/protocol/:protocolId/done" element={<CompletionPage />} />
         <Route path="/protocol/:protocolId/stopped" element={<StoppedPage />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
