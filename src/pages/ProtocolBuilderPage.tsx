@@ -8,8 +8,6 @@ import { BigButton } from '@/components/ui/BigButton';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 
 const EMOJIS = ['📋', '🚿', '🌙', '🧹', '⚡', '👗', '🍳', '🧘', '💊', '🎒', '🏠', '💼', '🎨', '⭐', '🌿', '🔧'];
-const COLORS = ['primary', 'secondary', 'tertiary'];
-
 const STEP_TYPES = [
   { type: 'info' as const, label: 'Show a message', emoji: '💬', desc: 'Display text to read' },
   { type: 'instruction' as const, label: 'Give an instruction', emoji: '👉', desc: 'A step to complete before moving on' },
