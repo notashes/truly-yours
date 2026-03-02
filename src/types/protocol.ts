@@ -12,6 +12,7 @@ export interface ChecklistItem {
   id: string;
   label: string;
   optional: boolean;
+  children?: ChecklistItem[];
 }
 
 export interface TemperatureRange {

@@ -241,6 +241,82 @@ function QuestionEditor({ step, onChange, referenceLists }: {
   );
 }
 
+// === Tree helpers for checklist items ===
+function updateItemInTree(items: ChecklistItem[], itemId: string, updates: Partial<ChecklistItem>): ChecklistItem[] {
+  return items.map(item => {
+    if (item.id === itemId) return { ...item, ...updates };
+    if (item.children) return { ...item, children: updateItemInTree(item.children, itemId, updates) };
+    return item;
+  });
+}
+
+function removeItemFromTree(items: ChecklistItem[], itemId: string): ChecklistItem[] {
+  return items
+    .filter(item => item.id !== itemId)
+    .map(item => item.children ? { ...item, children: removeItemFromTree(item.children, itemId) } : item);
+}
+
+function addChildToItem(items: ChecklistItem[], parentId: string, child: ChecklistItem): ChecklistItem[] {
+  return items.map(item => {
+    if (item.id === parentId) return { ...item, children: [...(item.children ?? []), child] };
+    if (item.children) return { ...item, children: addChildToItem(item.children, parentId, child) };
+    return item;
+  });
+}
+
+// === Checklist item row (recursive) ===
+function ChecklistItemEditor({ item, onUpdate, onRemove, onAddChild, depth = 0 }: {
+  item: ChecklistItem;
+  onUpdate: (id: string, updates: Partial<ChecklistItem>) => void;
+  onRemove: (id: string) => void;
+  onAddChild: (parentId: string) => void;
+  depth?: number;
+}) {
+  return (
+    <>
+      <div
+        className="flex items-center gap-2 bg-surface-container rounded-xl p-2"
+        style={depth > 0 ? { marginLeft: `${depth * 16}px` } : undefined}
+      >
+        <input
+          value={item.label}
+          onChange={e => onUpdate(item.id, { label: e.target.value })}
+          placeholder={depth > 0 ? 'Sub-item...' : 'Item...'}
+          className="flex-1 p-2 rounded-lg bg-surface-container-high text-on-surface text-sm border-0 outline-none"
+        />
+        <button
+          onClick={() => onUpdate(item.id, { optional: !item.optional })}
+          className={`text-xs px-2 py-1 rounded-full ${item.optional ? 'bg-surface-variant text-on-surface-variant' : 'bg-primary-container text-on-primary-container'}`}
+        >
+          {item.optional ? 'optional' : 'required'}
+        </button>
+        {depth === 0 && (
+          <button
+            onClick={() => onAddChild(item.id)}
+            className="p-1 text-primary"
+            title="Add sub-item"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+          </button>
+        )}
+        <button
+          onClick={() => onRemove(item.id)}
+          className="p-1 text-error"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      {item.children?.map(child => (
+        <ChecklistItemEditor key={child.id} item={child} onUpdate={onUpdate} onRemove={onRemove} onAddChild={onAddChild} depth={depth + 1} />
+      ))}
+    </>
+  );
+}
+
 // === Checklist sub-editor ===
 function ChecklistEditor({ step, onChange }: { step: BuilderStep; onChange: (s: BuilderStep) => void }) {
   const items = step.checklistItems ?? [];
@@ -253,37 +329,24 @@ function ChecklistEditor({ step, onChange }: { step: BuilderStep; onChange: (s: 
     setNewLabel('');
   };
 
+  const handleUpdate = (itemId: string, updates: Partial<ChecklistItem>) => {
+    onChange({ ...step, checklistItems: updateItemInTree(items, itemId, updates) });
+  };
+
+  const handleRemove = (itemId: string) => {
+    onChange({ ...step, checklistItems: removeItemFromTree(items, itemId) });
+  };
+
+  const handleAddChild = (parentId: string) => {
+    const child: ChecklistItem = { id: uid(), label: '', optional: false };
+    onChange({ ...step, checklistItems: addChildToItem(items, parentId, child) });
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <label className="text-xs text-on-surface-variant">Checklist items</label>
-      {items.map((item, idx) => (
-        <div key={item.id} className="flex items-center gap-2 bg-surface-container rounded-xl p-2">
-          <input
-            value={item.label}
-            onChange={e => {
-              const newItems = items.map((it, i) => i === idx ? { ...it, label: e.target.value } : it);
-              onChange({ ...step, checklistItems: newItems });
-            }}
-            className="flex-1 p-2 rounded-lg bg-surface-container-high text-on-surface text-sm border-0 outline-none"
-          />
-          <button
-            onClick={() => {
-              const newItems = items.map((it, i) => i === idx ? { ...it, optional: !it.optional } : it);
-              onChange({ ...step, checklistItems: newItems });
-            }}
-            className={`text-xs px-2 py-1 rounded-full ${item.optional ? 'bg-surface-variant text-on-surface-variant' : 'bg-primary-container text-on-primary-container'}`}
-          >
-            {item.optional ? 'optional' : 'required'}
-          </button>
-          <button
-            onClick={() => onChange({ ...step, checklistItems: items.filter((_, i) => i !== idx) })}
-            className="p-1 text-error"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+      {items.map(item => (
+        <ChecklistItemEditor key={item.id} item={item} onUpdate={handleUpdate} onRemove={handleRemove} onAddChild={handleAddChild} />
       ))}
       <div className="flex gap-2">
         <input
