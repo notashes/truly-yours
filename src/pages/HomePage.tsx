@@ -11,6 +11,10 @@ function getPrefixedId(item: HomeItem): string {
   return item.type === 'protocol' ? `p:${item.id}` : `c:${item.id}`;
 }
 
+function getColSpan(item: HomeItem): number {
+  return item.type === 'checklist' ? 2 : 1;
+}
+
 export function HomePage() {
   const navigate = useNavigate();
   const { homeItems, allModes, reorderHome } = useContentStore();
@@ -26,6 +30,7 @@ export function HomePage() {
       haptic.drop();
     },
     getId: getPrefixedId,
+    getColSpan,
     enabled: isEditMode,
     onActivate: () => {
       setIsEditMode(true);
@@ -134,7 +139,7 @@ export function HomePage() {
             );
           }
 
-          // Checklist card
+          // Checklist card — full-width row
           const checklist = item.data;
           return (
             <button
@@ -145,27 +150,32 @@ export function HomePage() {
                 if (isEditMode || dragState.isDragging) return;
                 navigate(`/manage/checklists/${checklist.id}`);
               }}
-              className={`bg-surface-container-low rounded-[20px] p-5
-                flex flex-col items-center gap-3 text-center select-none
+              className={`col-span-2 bg-surface-container-low rounded-[20px] p-4
+                flex items-center gap-3 text-left select-none
                 ${isDraggedCard
                   ? 'drag-lifted z-50'
                   : isEditMode && !isActiveDrag
                     ? 'animate-wiggle cursor-grab'
                     : isEditMode && isActiveDrag
                       ? 'cursor-grab'
-                      : 'hover:bg-surface-container transition-all active:scale-[0.97] ripple cursor-pointer'
+                      : 'hover:bg-surface-container transition-all active:scale-[0.98] ripple cursor-pointer'
                 }`}
               style={{
                 willChange: isEditMode || dragState.isDragging ? 'transform' : undefined,
                 animationDelay: isEditMode && !isActiveDrag && !isDraggedCard ? `${i * 60}ms` : undefined,
               }}
             >
-              <div className={`w-12 h-12 rounded-full bg-tertiary-container flex items-center justify-center
+              <div className={`w-10 h-10 rounded-full bg-tertiary-container flex items-center justify-center flex-shrink-0
                 transition-transform duration-200
                 ${isDraggedCard && dragState.phase === 'dragging' ? 'scale-110' : ''}`}>
-                <span className="text-2xl">{checklist.emoji}</span>
+                <span className="text-lg">{checklist.emoji}</span>
               </div>
-              <span className="text-sm font-medium text-on-surface leading-tight">{checklist.name}</span>
+              <div className="min-w-0">
+                <span className="text-sm font-medium text-on-surface">{checklist.name}</span>
+                {checklist.description && (
+                  <p className="text-xs text-on-surface-variant mt-0.5 truncate">{checklist.description}</p>
+                )}
+              </div>
             </button>
           );
         })}

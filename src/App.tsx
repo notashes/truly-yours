@@ -6,6 +6,7 @@ import { CompletionPage, StoppedPage } from '@/pages/CompletionPage';
 import { HistoryPage } from '@/pages/HistoryPage';
 import { MoodPage } from '@/pages/MoodPage';
 import { ManagePage } from '@/pages/ManagePage';
+import { SettingsPage } from '@/pages/SettingsPage';
 import { ReferenceListBuilderPage } from '@/pages/ReferenceListBuilderPage';
 import { ReferenceListViewPage } from '@/pages/ReferenceListViewPage';
 import { ChecklistBuilderPage } from '@/pages/ChecklistBuilderPage';
@@ -24,6 +25,7 @@ function App() {
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/mood" element={<MoodPage />} />
           <Route path="/manage" element={<ManagePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
         <Route path="/protocol/:protocolId" element={<ProtocolRunnerPage />} />
         <Route path="/protocol/:protocolId/done" element={<CompletionPage />} />

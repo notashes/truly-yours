@@ -5,6 +5,7 @@ interface UseDragReorderOptions<T> {
   columns: number;
   onReorder: (reorderedItems: T[]) => void;
   getId: (item: T) => string;
+  getColSpan?: (item: T) => number;
   enabled: boolean;
   onActivate?: () => void;
 }
@@ -16,6 +17,8 @@ interface DragState {
   overIndex: number | null;
   phase: 'idle' | 'dragging' | 'dropping';
 }
+
+interface LayoutRect { x: number; y: number; w: number; h: number }
 
 const LONG_PRESS_MS = 500;
 const GAP = 12; // matches Tailwind gap-3
@@ -41,7 +44,7 @@ const SLIDE_MS = 280;
 const DROP_MS = 320;
 const PICKUP_MS = 220;
 
-export function useDragReorder<T>({ items, columns, onReorder, getId, enabled, onActivate }: UseDragReorderOptions<T>) {
+export function useDragReorder<T>({ items, columns, onReorder, getId, getColSpan, enabled, onActivate }: UseDragReorderOptions<T>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Map<string, HTMLElement>>(new Map());
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -56,6 +59,10 @@ export function useDragReorder<T>({ items, columns, onReorder, getId, enabled, o
   const isDraggingRef = useRef(false);
   const animFrameId = useRef<number>(0);
 
+  // Mixed layout measurements
+  const mixedSizes = useRef<{ smallH: number; fullH: number; containerW: number }>({ smallH: 0, fullH: 0, containerW: 0 });
+  const origLayout = useRef<LayoutRect[]>([]);
+
   // Stable refs for callbacks captured by window event listeners
   const onReorderRef = useRef(onReorder);
   onReorderRef.current = onReorder;
@@ -63,6 +70,8 @@ export function useDragReorder<T>({ items, columns, onReorder, getId, enabled, o
   itemsRef.current = items;
   const getIdRef = useRef(getId);
   getIdRef.current = getId;
+  const getColSpanRef = useRef(getColSpan);
+  getColSpanRef.current = getColSpan;
   const columnsRef = useRef(columns);
   columnsRef.current = columns;
 
@@ -81,24 +90,126 @@ export function useDragReorder<T>({ items, columns, onReorder, getId, enabled, o
     }
   }, [items]);
 
+  const isMixed = !!getColSpan;
+
+  // === VIRTUAL LAYOUT ENGINE (for mixed col-span items) ===
+  const computeLayout = useCallback((orderedItems: T[], skipIndex?: number): LayoutRect[] => {
+    const fn = getColSpanRef.current;
+    if (!fn) return [];
+    const cols = columnsRef.current;
+    const { smallH, fullH, containerW } = mixedSizes.current;
+    if (containerW === 0) return [];
+
+    const colW = (containerW - GAP * (cols - 1)) / cols;
+    const rects: LayoutRect[] = [];
+    let y = 0;
+    let col = 0;
+
+    for (let i = 0; i < orderedItems.length; i++) {
+      if (i === skipIndex) { rects.push({ x: 0, y: 0, w: 0, h: 0 }); continue; }
+      const item = orderedItems[i];
+      const span = fn(item);
+
+      if (span >= cols) {
+        // Full-width item: finish current row first
+        if (col > 0) { y += smallH + GAP; col = 0; }
+        rects.push({ x: 0, y, w: containerW, h: fullH });
+        y += fullH + GAP;
+      } else {
+        // Normal item
+        if (col >= cols) { y += smallH + GAP; col = 0; }
+        rects.push({ x: col * (colW + GAP), y, w: colW, h: smallH });
+        col++;
+        if (col >= cols) { y += smallH + GAP; col = 0; }
+      }
+    }
+    return rects;
+  }, []);
+
+  const computeReorderedLayout = useCallback((dragIdx: number, overIdx: number): LayoutRect[] => {
+    const reordered = [...currentOrder.current];
+    const [moved] = reordered.splice(dragIdx, 1);
+    reordered.splice(overIdx, 0, moved);
+    return computeLayout(reordered);
+  }, [computeLayout]);
+
+  // === UNIFORM GRID HELPERS (original behavior, used when no getColSpan) ===
+
   const measureGrid = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
     containerRectRef.current = container.getBoundingClientRect();
 
-    const firstItem = itemRefs.current.values().next().value;
-    if (firstItem) {
-      const rect = firstItem.getBoundingClientRect();
-      cellSize.current = { w: rect.width, h: rect.height };
+    if (isMixed) {
+      // Mixed layout: measure different item sizes
+      const fn = getColSpanRef.current!;
+      let measuredSmall = false;
+      let measuredFull = false;
+      mixedSizes.current.containerW = containerRectRef.current.width;
+
+      for (const [id, el] of itemRefs.current) {
+        const item = currentOrder.current.find(it => getIdRef.current(it) === id);
+        if (!item) continue;
+        const span = fn(item);
+        const rect = el.getBoundingClientRect();
+        if (span >= columnsRef.current && !measuredFull) {
+          mixedSizes.current.fullH = rect.height;
+          measuredFull = true;
+        } else if (span < columnsRef.current && !measuredSmall) {
+          mixedSizes.current.smallH = rect.height;
+          measuredSmall = true;
+        }
+        if (measuredSmall && measuredFull) break;
+      }
+      // Fallback: if no full-width items exist yet, use small height
+      if (!measuredFull) mixedSizes.current.fullH = mixedSizes.current.smallH;
+      if (!measuredSmall) mixedSizes.current.smallH = mixedSizes.current.fullH;
+
+      // Compute and store original layout
+      origLayout.current = computeLayout(currentOrder.current);
+    } else {
+      const firstItem = itemRefs.current.values().next().value;
+      if (firstItem) {
+        const rect = firstItem.getBoundingClientRect();
+        cellSize.current = { w: rect.width, h: rect.height };
+      }
     }
-  }, []);
+  }, [isMixed, computeLayout]);
 
   const getGridIndex = useCallback((px: number, py: number): number => {
     const cr = containerRectRef.current;
     if (!cr) return 0;
+
+    if (isMixed) {
+      // Mixed layout: use actual layout rects for hit detection
+      const layout = origLayout.current;
+      if (layout.length === 0) return 0;
+
+      const relX = px - cr.left;
+      const relY = py - cr.top;
+
+      // Find closest item by vertical proximity
+      let bestIdx = 0;
+      let bestDist = Infinity;
+
+      for (let i = 0; i < layout.length; i++) {
+        const r = layout[i];
+        if (r.w === 0) continue; // skipped item
+        const centerY = r.y + r.h / 2;
+        const centerX = r.x + r.w / 2;
+        // Weight vertical distance more heavily
+        const dist = Math.abs(relY - centerY) * 2 + Math.abs(relX - centerX);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestIdx = i;
+        }
+      }
+      return bestIdx;
+    }
+
+    // Uniform grid
     const { w, h } = cellSize.current;
     if (w === 0 || h === 0) return 0;
-
     const relX = px - cr.left;
     const relY = py - cr.top;
     const col = Math.floor(relX / (w + GAP));
@@ -107,12 +218,41 @@ export function useDragReorder<T>({ items, columns, onReorder, getId, enabled, o
     const clampedRow = Math.max(0, row);
     const idx = clampedRow * columnsRef.current + clampedCol;
     return Math.max(0, Math.min(idx, itemsRef.current.length - 1));
-  }, []);
+  }, [isMixed]);
 
   // Animate non-dragged items to their displaced positions
   const animateItems = useCallback((dragIdx: number, overIdx: number) => {
-    const cols = columnsRef.current;
     const getId = getIdRef.current;
+
+    if (isMixed) {
+      // Mixed layout: compute target layout for tentative reorder
+      const targetLayout = computeReorderedLayout(dragIdx, overIdx);
+      const origL = origLayout.current;
+
+      // Build a mapping: for each item in the reordered list, find which original item it is
+      const reordered = [...currentOrder.current];
+      const [moved] = reordered.splice(dragIdx, 1);
+      reordered.splice(overIdx, 0, moved);
+
+      itemRefs.current.forEach((el, id) => {
+        const origIdx = currentOrder.current.findIndex(item => getId(item) === id);
+        if (origIdx === dragIdx) return; // dragged item handled separately
+
+        // Find this item's position in the reordered list
+        const newIdx = reordered.findIndex(item => getId(item) === id);
+        if (newIdx < 0 || !origL[origIdx] || !targetLayout[newIdx]) return;
+
+        const dx = targetLayout[newIdx].x - origL[origIdx].x;
+        const dy = targetLayout[newIdx].y - origL[origIdx].y;
+
+        el.style.transition = `transform ${SLIDE_MS}ms ${SLIDE}`;
+        el.style.transform = dx === 0 && dy === 0 ? '' : `translate(${dx}px, ${dy}px)`;
+      });
+      return;
+    }
+
+    // Uniform grid
+    const cols = columnsRef.current;
     itemRefs.current.forEach((el, id) => {
       const itemIndex = currentOrder.current.findIndex(item => getId(item) === id);
       if (itemIndex === dragIdx) return;
@@ -135,7 +275,7 @@ export function useDragReorder<T>({ items, columns, onReorder, getId, enabled, o
       el.style.transition = `transform ${SLIDE_MS}ms ${SLIDE}`;
       el.style.transform = dx === 0 && dy === 0 ? '' : `translate(${dx}px, ${dy}px)`;
     });
-  }, []);
+  }, [isMixed, computeReorderedLayout]);
 
   const resetItemTransforms = useCallback(() => {
     itemRefs.current.forEach((el) => {
@@ -186,7 +326,6 @@ export function useDragReorder<T>({ items, columns, onReorder, getId, enabled, o
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
-      // Long press was cancelled (tap or short hold) — unlock unless in edit mode
       if (!isDraggingRef.current) {
         unlockOverscroll();
       }
@@ -200,24 +339,37 @@ export function useDragReorder<T>({ items, columns, onReorder, getId, enabled, o
       const dragIdx = startIndexRef.current;
       const overIdx = overIndexRef.current;
       const el = draggedEl.current;
-      const cols = columnsRef.current;
-      const { w, h } = cellSize.current;
 
-      // Calculate where the card should land (offset from its DOM position)
-      const startCol = dragIdx % cols;
-      const startRow = Math.floor(dragIdx / cols);
-      const overCol = overIdx % cols;
-      const overRow = Math.floor(overIdx / cols);
-      const targetDx = (overCol - startCol) * (w + GAP);
-      const targetDy = (overRow - startRow) * (h + GAP);
+      let targetDx: number;
+      let targetDy: number;
+
+      if (isMixed) {
+        // Mixed layout: compute drop position from layout engine
+        const targetLayout = computeReorderedLayout(dragIdx, overIdx);
+        const origL = origLayout.current;
+        // The dragged item ends up at position overIdx in the reordered list
+        const reordered = [...currentOrder.current];
+        const [moved] = reordered.splice(dragIdx, 1);
+        reordered.splice(overIdx, 0, moved);
+        const newIdx = reordered.findIndex(item => getIdRef.current(item) === getIdRef.current(currentOrder.current[dragIdx]));
+        targetDx = (targetLayout[newIdx]?.x ?? 0) - (origL[dragIdx]?.x ?? 0);
+        targetDy = (targetLayout[newIdx]?.y ?? 0) - (origL[dragIdx]?.y ?? 0);
+      } else {
+        const cols = columnsRef.current;
+        const { w, h } = cellSize.current;
+        const startCol = dragIdx % cols;
+        const startRow = Math.floor(dragIdx / cols);
+        const overCol = overIdx % cols;
+        const overRow = Math.floor(overIdx / cols);
+        targetDx = (overCol - startCol) * (w + GAP);
+        targetDy = (overRow - startRow) * (h + GAP);
+      }
 
       setDragState(prev => ({ ...prev, phase: 'dropping' }));
 
-      // Smoothly fly the card to its target position with spring bounce
       el.style.transition = `transform ${DROP_MS}ms ${SPRING}`;
       el.style.transform = `translate(${targetDx}px, ${targetDy}px) scale(1) rotate(0deg)`;
 
-      // After the drop animation, commit the reorder
       setTimeout(() => {
         if (dragIdx !== overIdx && dragIdx >= 0 && overIdx >= 0) {
           const reordered = [...currentOrder.current];
@@ -251,7 +403,7 @@ export function useDragReorder<T>({ items, columns, onReorder, getId, enabled, o
         phase: 'idle',
       });
     }
-  }, [handlePointerMove, resetItemTransforms]);
+  }, [handlePointerMove, resetItemTransforms, isMixed, computeReorderedLayout]);
 
   const startDrag = useCallback((itemId: string, index: number) => {
     measureGrid();
@@ -264,10 +416,8 @@ export function useDragReorder<T>({ items, columns, onReorder, getId, enabled, o
       draggedEl.current = el;
       el.style.zIndex = '50';
       el.style.willChange = 'transform';
-      // Smooth spring pickup: card lifts up with a satisfying bounce
       el.style.transition = `transform ${PICKUP_MS}ms ${SPRING}`;
       el.style.transform = 'scale(1.06)';
-      // After pickup completes, switch to instant following
       setTimeout(() => {
         if (draggedEl.current === el && isDraggingRef.current) {
           el.style.transition = 'none';
@@ -291,7 +441,6 @@ export function useDragReorder<T>({ items, columns, onReorder, getId, enabled, o
     pointerStart.current = { x: e.clientX, y: e.clientY };
     pointerCurrent.current = { x: e.clientX, y: e.clientY };
 
-    // Lock immediately to prevent pull-to-refresh during long press or drag
     lockOverscroll();
 
     window.addEventListener('pointermove', handlePointerMove);

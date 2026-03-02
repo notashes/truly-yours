@@ -1,8 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useContentStore } from '@/store/useContentStore';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { PALETTES, applyPalette, savePaletteId, getStoredPaletteId, type PaletteId } from '@/lib/theme';
 
 type Tab = 'protocols' | 'checklists' | 'lists' | 'modes';
 
@@ -15,14 +14,10 @@ export function ManagePage() {
     deleteProtocol, duplicateProtocol,
     deleteChecklist, deleteReferenceList,
     deleteMode,
-    exportBackup, importBackup,
   } = useContentStore();
   const [tab, setTab] = useState<Tab>('protocols');
   const [showCreate, setShowCreate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ type: string; id: string; name: string } | null>(null);
-  const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [activePalette, setActivePalette] = useState<PaletteId>(getStoredPaletteId);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const allProtoList = Object.values(allProtocols).filter(p => !p.isSubProtocol);
   const allCheckList = Object.values(allChecklists);
@@ -76,7 +71,6 @@ export function ManagePage() {
                   </p>
                 </div>
                 <div className="flex gap-1">
-                  {/* Edit button — always goes to edit page */}
                   <button
                     onClick={() => navigate(`/manage/protocols/${proto.id}/edit`)}
                     className="p-2 rounded-full hover:bg-surface-variant transition-colors"
@@ -86,7 +80,6 @@ export function ManagePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
                     </svg>
                   </button>
-                  {/* Duplicate button */}
                   <button
                     onClick={() => {
                       const copy = duplicateProtocol(proto.id);
@@ -99,7 +92,6 @@ export function ManagePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
                     </svg>
                   </button>
-                  {/* Delete (user-created) or Reset to default (user-modified) */}
                   {proto.source === 'user-modified' && (
                     <button
                       onClick={() => setConfirmDelete({ type: 'protocol-reset', id: proto.id, name: proto.name })}
@@ -231,7 +223,6 @@ export function ManagePage() {
       {/* Modes tab */}
       {tab === 'modes' && (
         <div className="flex flex-col gap-2">
-          {/* Default mode (always shown, not editable) */}
           <div className="bg-surface-container-low rounded-2xl p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center flex-shrink-0">
@@ -276,117 +267,6 @@ export function ManagePage() {
           ))}
         </div>
       )}
-
-      {/* Theme */}
-      <div className="mt-10 pt-6 border-t border-outline-variant">
-        <h2 className="text-sm font-semibold text-on-surface mb-3">Theme</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {PALETTES.map(palette => {
-            const isActive = palette.id === activePalette;
-            const swatches = [
-              palette.colors['primary'],
-              palette.colors['secondary'],
-              palette.colors['tertiary'],
-              palette.colors['surface-dim'],
-              palette.colors['primary-container'],
-            ];
-            return (
-              <button
-                key={palette.id}
-                onClick={() => {
-                  setActivePalette(palette.id);
-                  savePaletteId(palette.id);
-                  applyPalette(palette.id);
-                }}
-                className={`rounded-2xl p-4 text-left transition-all
-                  ${isActive
-                    ? 'bg-primary-container ring-2 ring-primary'
-                    : 'bg-surface-container-low hover:bg-surface-container'}`}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-lg">{palette.emoji}</span>
-                  <span className="text-sm font-medium text-on-surface flex-1">{palette.name}</span>
-                  {isActive && (
-                    <svg className="w-5 h-5 text-primary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                  )}
-                </div>
-                <p className="text-xs text-on-surface-variant mb-3">{palette.description}</p>
-                <div className="flex gap-1.5">
-                  {swatches.map((color, i) => (
-                    <div
-                      key={i}
-                      className="w-6 h-6 rounded-full border border-black/10"
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Backup / Restore */}
-      <div className="mt-10 pt-6 border-t border-outline-variant">
-        <h2 className="text-sm font-semibold text-on-surface mb-3">Backup & Restore</h2>
-        <div className="flex gap-3">
-          <button
-            onClick={() => {
-              const json = exportBackup();
-              const blob = new Blob([json], { type: 'application/json' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `truly-yours-backup-${new Date().toISOString().slice(0, 10)}.json`;
-              a.click();
-              URL.revokeObjectURL(url);
-            }}
-            className="flex-1 py-3 rounded-2xl bg-surface-container-low text-on-surface text-sm font-medium
-              hover:bg-surface-container transition-colors flex items-center justify-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-            </svg>
-            Export
-          </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex-1 py-3 rounded-2xl bg-surface-container-low text-on-surface text-sm font-medium
-              hover:bg-surface-container transition-colors flex items-center justify-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-            </svg>
-            Import
-          </button>
-        </div>
-        {importStatus === 'success' && (
-          <p className="text-sm text-primary mt-2 text-center">Backup restored successfully!</p>
-        )}
-        {importStatus === 'error' && (
-          <p className="text-sm text-error mt-2 text-center">Invalid backup file. Please try again.</p>
-        )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json"
-          className="hidden"
-          onChange={e => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-              const ok = importBackup(reader.result as string);
-              setImportStatus(ok ? 'success' : 'error');
-              setTimeout(() => setImportStatus('idle'), 3000);
-            };
-            reader.readAsText(file);
-            e.target.value = '';
-          }}
-        />
-      </div>
 
       {/* FAB */}
       <button
