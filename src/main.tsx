@@ -8,6 +8,10 @@ import App from './App.tsx'
 // Apply stored palette BEFORE first render to prevent flash of wrong theme
 applyPalette(getStoredPaletteId())
 
+// Request persistent storage so the browser won't evict user data
+navigator.storage?.persist?.()
+
+
 // Auto-update: when a new version is deployed, reload to get it
 const updateSW = registerSW({
   immediate: true,
