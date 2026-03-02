@@ -3,7 +3,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { protocols as defaultProtocolsMap, mainProtocols as defaultMainProtocols } from '@/protocols';
 import { PALETTE_STORAGE_KEY, applyPalette, type PaletteId } from '@/lib/theme';
 import type { Protocol } from '@/types/protocol';
-import type { ReferenceList, StandaloneChecklist, Mode } from '@/types/content';
+import type { ReferenceList, StandaloneChecklist, Mode, HomeItem } from '@/types/content';
 
 const DEFAULT_MODE: Mode = {
   id: '__default__',
@@ -36,7 +36,8 @@ interface ContentStoreValue {
   saveMode: (mode: Mode) => void;
   deleteMode: (id: string) => void;
   setActiveMode: (id: string | null) => void;
-  reorderProtocols: (orderedIds: string[]) => void;
+  homeItems: HomeItem[];
+  reorderHome: (orderedPrefixedIds: string[]) => void;
   exportBackup: () => string;
   importBackup: (json: string) => boolean;
 }
@@ -50,6 +51,7 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
   const [modes, setModes] = useLocalStorage<Record<string, Mode>>('ty_modes', {});
   const [activeModeId, setActiveModeId] = useLocalStorage<string | null>('ty_active_mode', null);
   const [defaultProtocolOrder, setDefaultProtocolOrder] = useLocalStorage<string[]>('ty_default_protocol_order', []);
+  const [homeOrder, setHomeOrder] = useLocalStorage<string[]>('ty_home_order', []);
 
   const allProtocols = useMemo<Record<string, Protocol>>(() => {
     const merged = { ...defaultProtocolsMap };
@@ -107,6 +109,95 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
       .map(id => checklists[id])
       .filter((c): c is StandaloneChecklist => c != null);
   }, [currentMode, checklists]);
+
+  // === UNIFIED HOME ITEMS ===
+  const homeItems = useMemo<HomeItem[]>(() => {
+    if (currentMode.id !== '__default__') {
+      // Custom mode: protocols in mode order, then checklists
+      const items: HomeItem[] = [];
+      for (const id of currentMode.protocolIds) {
+        const p = allProtocols[id];
+        if (p && !p.isSubProtocol) items.push({ type: 'protocol', id: p.id, data: p });
+      }
+      const clIds = currentMode.checklistIds.length > 0 ? currentMode.checklistIds : Object.keys(checklists);
+      for (const id of clIds) {
+        const c = checklists[id];
+        if (c) items.push({ type: 'checklist', id: c.id, data: c });
+      }
+      return items;
+    }
+
+    // Default mode — use homeOrder if available
+    if (homeOrder.length > 0) {
+      const items: HomeItem[] = [];
+      const seen = new Set<string>();
+      for (const entry of homeOrder) {
+        if (seen.has(entry)) continue;
+        seen.add(entry);
+        const colonIdx = entry.indexOf(':');
+        if (colonIdx === -1) continue;
+        const prefix = entry.slice(0, colonIdx);
+        const id = entry.slice(colonIdx + 1);
+        if (prefix === 'p') {
+          const p = allProtocols[id];
+          if (p && !p.isSubProtocol) items.push({ type: 'protocol', id, data: p });
+        } else if (prefix === 'c') {
+          const c = checklists[id];
+          if (c) items.push({ type: 'checklist', id, data: c });
+        }
+      }
+      // Append new protocols not yet in homeOrder
+      const modeIdSet = new Set(currentMode.protocolIds);
+      for (const id of currentMode.protocolIds) {
+        if (!seen.has(`p:${id}`)) {
+          const p = allProtocols[id];
+          if (p && !p.isSubProtocol) items.push({ type: 'protocol', id, data: p });
+        }
+      }
+      for (const p of Object.values(userProtocols)) {
+        if (!p.isSubProtocol && !seen.has(`p:${p.id}`) && !modeIdSet.has(p.id)) {
+          items.push({ type: 'protocol', id: p.id, data: p });
+        }
+      }
+      // Append new checklists not yet in homeOrder
+      for (const c of Object.values(checklists)) {
+        if (!seen.has(`c:${c.id}`)) {
+          items.push({ type: 'checklist', id: c.id, data: c });
+        }
+      }
+      return items;
+    }
+
+    // Migrate from old defaultProtocolOrder, or build fresh
+    const items: HomeItem[] = [];
+    if (defaultProtocolOrder.length > 0) {
+      const seen = new Set<string>();
+      for (const id of defaultProtocolOrder) {
+        const p = allProtocols[id];
+        if (p && !p.isSubProtocol) { items.push({ type: 'protocol', id, data: p }); seen.add(id); }
+      }
+      const modeIdSet = new Set(currentMode.protocolIds);
+      for (const id of currentMode.protocolIds) {
+        if (!seen.has(id)) { const p = allProtocols[id]; if (p && !p.isSubProtocol) items.push({ type: 'protocol', id, data: p }); }
+      }
+      for (const p of Object.values(userProtocols)) {
+        if (!p.isSubProtocol && !seen.has(p.id) && !modeIdSet.has(p.id)) items.push({ type: 'protocol', id: p.id, data: p });
+      }
+    } else {
+      const modeIdSet = new Set(currentMode.protocolIds);
+      for (const id of currentMode.protocolIds) {
+        const p = allProtocols[id]; if (p && !p.isSubProtocol) items.push({ type: 'protocol', id, data: p });
+      }
+      for (const p of Object.values(userProtocols)) {
+        if (!p.isSubProtocol && !modeIdSet.has(p.id)) items.push({ type: 'protocol', id: p.id, data: p });
+      }
+    }
+    // Append all checklists
+    for (const c of Object.values(checklists)) {
+      items.push({ type: 'checklist', id: c.id, data: c });
+    }
+    return items;
+  }, [currentMode, allProtocols, userProtocols, checklists, homeOrder, defaultProtocolOrder]);
 
   // === PROTOCOL CRUD ===
   const saveProtocol = useCallback((protocol: Protocol) => {
@@ -183,17 +274,29 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
     setActiveModeId(id === '__default__' ? null : id);
   }, [setActiveModeId]);
 
-  const reorderProtocols = useCallback((orderedIds: string[]) => {
+  const reorderHome = useCallback((orderedPrefixedIds: string[]) => {
     if (currentMode.id === '__default__') {
-      setDefaultProtocolOrder(orderedIds);
+      setHomeOrder(orderedPrefixedIds);
     } else {
+      // For custom modes, split back into protocolIds and checklistIds
+      const protocolIds: string[] = [];
+      const checklistIds: string[] = [];
+      for (const entry of orderedPrefixedIds) {
+        const colonIdx = entry.indexOf(':');
+        if (colonIdx === -1) continue;
+        const prefix = entry.slice(0, colonIdx);
+        const id = entry.slice(colonIdx + 1);
+        if (prefix === 'p') protocolIds.push(id);
+        else if (prefix === 'c') checklistIds.push(id);
+      }
       saveMode({
         ...currentMode,
-        protocolIds: orderedIds,
+        protocolIds,
+        checklistIds,
         updatedAt: new Date().toISOString(),
       });
     }
-  }, [currentMode, setDefaultProtocolOrder, saveMode]);
+  }, [currentMode, setHomeOrder, saveMode]);
 
   const exportBackup = useCallback(() => {
     return JSON.stringify({
@@ -205,11 +308,12 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
       ty_modes: modes,
       ty_active_mode: activeModeId,
       ty_default_protocol_order: defaultProtocolOrder,
+      ty_home_order: homeOrder,
       ty_active_palette: localStorage.getItem(PALETTE_STORAGE_KEY) || null,
       ty_history: JSON.parse(localStorage.getItem('ty_history') || '[]'),
       ty_moods: JSON.parse(localStorage.getItem('ty_moods') || '[]'),
     }, null, 2);
-  }, [userProtocols, checklists, referenceLists, modes, activeModeId, defaultProtocolOrder]);
+  }, [userProtocols, checklists, referenceLists, modes, activeModeId, defaultProtocolOrder, homeOrder]);
 
   const importBackup = useCallback((json: string): boolean => {
     try {
@@ -221,6 +325,7 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
       if (data.ty_modes) setModes(data.ty_modes);
       if (data.ty_active_mode !== undefined) setActiveModeId(data.ty_active_mode);
       if (data.ty_default_protocol_order) setDefaultProtocolOrder(data.ty_default_protocol_order);
+      if (data.ty_home_order) setHomeOrder(data.ty_home_order);
       if (data.ty_active_palette) {
         localStorage.setItem(PALETTE_STORAGE_KEY, data.ty_active_palette);
         applyPalette(data.ty_active_palette as PaletteId);
@@ -231,7 +336,7 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
     } catch {
       return false;
     }
-  }, [setUserProtocols, setChecklists, setReferenceLists, setModes, setActiveModeId, setDefaultProtocolOrder]);
+  }, [setUserProtocols, setChecklists, setReferenceLists, setModes, setActiveModeId, setDefaultProtocolOrder, setHomeOrder]);
 
   const value = useMemo<ContentStoreValue>(() => ({
     allProtocols,
@@ -252,7 +357,8 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
     saveMode,
     deleteMode,
     setActiveMode,
-    reorderProtocols,
+    homeItems,
+    reorderHome,
     exportBackup,
     importBackup,
   }), [
@@ -260,7 +366,7 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
     referenceLists, allModes, currentMode, activeModeId,
     saveProtocol, deleteProtocol, duplicateProtocol,
     saveChecklist, deleteChecklist, saveReferenceList, deleteReferenceList,
-    saveMode, deleteMode, setActiveMode, reorderProtocols, exportBackup, importBackup,
+    saveMode, deleteMode, setActiveMode, homeItems, reorderHome, exportBackup, importBackup,
   ]);
 
   return (

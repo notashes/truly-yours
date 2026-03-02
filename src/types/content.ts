@@ -1,4 +1,4 @@
-import type { ChecklistItem } from './protocol';
+import type { ChecklistItem, Protocol } from './protocol';
 
 export type ContentSource = 'default' | 'user' | 'user-modified';
 
@@ -33,6 +33,10 @@ export interface StandaloneChecklist {
   createdAt: string;
   updatedAt: string;
 }
+
+export type HomeItem =
+  | { type: 'protocol'; id: string; data: Protocol }
+  | { type: 'checklist'; id: string; data: StandaloneChecklist };
 
 export interface Mode {
   id: string;

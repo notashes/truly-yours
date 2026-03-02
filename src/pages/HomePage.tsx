@@ -5,22 +5,27 @@ import { WeatherDisplay } from '@/components/weather/WeatherDisplay';
 import { ModeSwitcher } from '@/components/ModeSwitcher';
 import { useDragReorder } from '@/hooks/useDragReorder';
 import { useHaptic } from '@/hooks/useHaptic';
+import type { HomeItem } from '@/types/content';
+
+function getPrefixedId(item: HomeItem): string {
+  return item.type === 'protocol' ? `p:${item.id}` : `c:${item.id}`;
+}
 
 export function HomePage() {
   const navigate = useNavigate();
-  const { visibleProtocols, visibleChecklists, allModes, reorderProtocols } = useContentStore();
+  const { homeItems, allModes, reorderHome } = useContentStore();
   const [isEditMode, setIsEditMode] = useState(false);
   const haptic = useHaptic();
   const lastOverRef = useRef<number | null>(null);
 
   const { containerRef, getItemProps, dragState } = useDragReorder({
-    items: visibleProtocols,
+    items: homeItems,
     columns: 2,
     onReorder: (reordered) => {
-      reorderProtocols(reordered.map(p => p.id));
+      reorderHome(reordered.map(getPrefixedId));
       haptic.drop();
     },
-    getId: (p) => p.id,
+    getId: getPrefixedId,
     enabled: isEditMode,
     onActivate: () => {
       setIsEditMode(true);
@@ -63,7 +68,7 @@ export function HomePage() {
               <button
                 onClick={() => { setIsEditMode(true); haptic.pickup(); }}
                 className="p-2 rounded-full hover:bg-surface-variant transition-colors"
-                title="Reorder protocols"
+                title="Rearrange items"
               >
                 <svg className="w-5 h-5 text-on-surface-variant" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
@@ -82,24 +87,63 @@ export function HomePage() {
         </div>
       )}
 
-      {/* Protocol grid */}
+      {/* Unified home grid */}
       <div
         ref={containerRef}
         className="grid grid-cols-2 gap-3"
         style={isEditMode || dragState.isDragging ? { touchAction: 'none' } : undefined}
       >
-        {visibleProtocols.map((protocol, i) => {
-          const itemProps = getItemProps(protocol, i);
-          const isDraggedCard = dragState.draggedId === protocol.id;
+        {homeItems.map((item, i) => {
+          const prefixedId = getPrefixedId(item);
+          const itemProps = getItemProps(item, i);
+          const isDraggedCard = dragState.draggedId === prefixedId;
 
+          if (item.type === 'protocol') {
+            const protocol = item.data;
+            return (
+              <button
+                key={prefixedId}
+                ref={itemProps.ref}
+                onPointerDown={itemProps.onPointerDown}
+                onClick={() => {
+                  if (isEditMode || dragState.isDragging) return;
+                  navigate(`/protocol/${protocol.id}`);
+                }}
+                className={`bg-surface-container-low rounded-[20px] p-5
+                  flex flex-col items-center gap-3 text-center select-none
+                  ${isDraggedCard
+                    ? 'drag-lifted z-50'
+                    : isEditMode && !isActiveDrag
+                      ? 'animate-wiggle cursor-grab'
+                      : isEditMode && isActiveDrag
+                        ? 'cursor-grab'
+                        : 'hover:bg-surface-container transition-all active:scale-[0.97] ripple cursor-pointer'
+                  }`}
+                style={{
+                  willChange: isEditMode || dragState.isDragging ? 'transform' : undefined,
+                  animationDelay: isEditMode && !isActiveDrag && !isDraggedCard ? `${i * 60}ms` : undefined,
+                }}
+              >
+                <div className={`w-12 h-12 rounded-full bg-primary-container flex items-center justify-center
+                  transition-transform duration-200
+                  ${isDraggedCard && dragState.phase === 'dragging' ? 'scale-110' : ''}`}>
+                  <span className="text-2xl">{protocol.emoji}</span>
+                </div>
+                <span className="text-sm font-medium text-on-surface leading-tight">{protocol.name}</span>
+              </button>
+            );
+          }
+
+          // Checklist card
+          const checklist = item.data;
           return (
             <button
-              key={protocol.id}
+              key={prefixedId}
               ref={itemProps.ref}
               onPointerDown={itemProps.onPointerDown}
               onClick={() => {
                 if (isEditMode || dragState.isDragging) return;
-                navigate(`/protocol/${protocol.id}`);
+                navigate(`/manage/checklists/${checklist.id}`);
               }}
               className={`bg-surface-container-low rounded-[20px] p-5
                 flex flex-col items-center gap-3 text-center select-none
@@ -116,43 +160,16 @@ export function HomePage() {
                 animationDelay: isEditMode && !isActiveDrag && !isDraggedCard ? `${i * 60}ms` : undefined,
               }}
             >
-              <div className={`w-12 h-12 rounded-full bg-primary-container flex items-center justify-center
+              <div className={`w-12 h-12 rounded-full bg-tertiary-container flex items-center justify-center
                 transition-transform duration-200
                 ${isDraggedCard && dragState.phase === 'dragging' ? 'scale-110' : ''}`}>
-                <span className="text-2xl">{protocol.emoji}</span>
+                <span className="text-2xl">{checklist.emoji}</span>
               </div>
-              <span className="text-sm font-medium text-on-surface leading-tight">{protocol.name}</span>
+              <span className="text-sm font-medium text-on-surface leading-tight">{checklist.name}</span>
             </button>
           );
         })}
       </div>
-
-      {/* Standalone checklists */}
-      {visibleChecklists.length > 0 && !isEditMode && (
-        <>
-          <h2 className="text-lg font-semibold text-on-surface mt-8 mb-3">Checklists</h2>
-          <div className="flex flex-col gap-2">
-            {visibleChecklists.map(checklist => (
-              <button
-                key={checklist.id}
-                onClick={() => navigate(`/manage/checklists/${checklist.id}`)}
-                className="bg-surface-container-low rounded-2xl p-4 flex items-center gap-3
-                  hover:bg-surface-container transition-all active:scale-[0.98] cursor-pointer ripple text-left"
-              >
-                <div className="w-10 h-10 rounded-full bg-tertiary-container flex items-center justify-center flex-shrink-0">
-                  <span className="text-lg">{checklist.emoji}</span>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-on-surface">{checklist.name}</span>
-                  {checklist.description && (
-                    <p className="text-xs text-on-surface-variant mt-0.5">{checklist.description}</p>
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
     </div>
   );
 }
