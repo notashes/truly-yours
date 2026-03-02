@@ -11,6 +11,7 @@ interface ProtocolContext {
 interface RunnerState {
   stack: ProtocolContext[];
   status: 'idle' | 'running' | 'completed' | 'stopped';
+  mainProtocolId: string | null;
   nodesVisited: string[];
   checklistResults: Record<string, boolean>;
   startedAt: string | null;
@@ -64,6 +65,7 @@ export function useProtocolRunner(allProtocols: Record<string, Protocol>) {
   const [state, setState] = useState<RunnerState>({
     stack: [],
     status: 'idle',
+    mainProtocolId: null,
     nodesVisited: [],
     checklistResults: {},
     startedAt: null,
@@ -143,6 +145,7 @@ export function useProtocolRunner(allProtocols: Record<string, Protocol>) {
     const newState: RunnerState = {
       stack: [{ protocol, currentNodeId: protocol.startNodeId }],
       status: 'running',
+      mainProtocolId: protocolId,
       nodesVisited: [protocol.startNodeId],
       checklistResults: {},
       startedAt: new Date().toISOString(),
@@ -211,6 +214,7 @@ export function useProtocolRunner(allProtocols: Record<string, Protocol>) {
     setState({
       stack: [],
       status: 'idle',
+      mainProtocolId: null,
       nodesVisited: [],
       checklistResults: {},
       startedAt: null,
@@ -218,17 +222,17 @@ export function useProtocolRunner(allProtocols: Record<string, Protocol>) {
   }, []);
 
   const getRun = useCallback((): ProtocolRun | null => {
-    if (!mainProtocol || !state.startedAt) return null;
+    if (!state.mainProtocolId || !state.startedAt) return null;
     return {
       id: crypto.randomUUID(),
-      protocolId: mainProtocol.id,
+      protocolId: state.mainProtocolId,
       startedAt: state.startedAt,
       completedAt: state.status === 'completed' ? new Date().toISOString() : null,
       stoppedEarly: state.status === 'stopped',
       nodesVisited: state.nodesVisited,
       checklistResults: state.checklistResults,
     };
-  }, [mainProtocol, state]);
+  }, [state]);
 
   return {
     currentNode,
