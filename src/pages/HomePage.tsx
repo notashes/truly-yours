@@ -36,6 +36,16 @@ export function HomePage() {
     lastOverRef.current = dragState.overIndex;
   }, [dragState.isDragging, dragState.overIndex, haptic]);
 
+  // Disable pull-to-refresh during edit mode so dragging down doesn't reload the page
+  useEffect(() => {
+    if (isEditMode) {
+      document.body.style.overscrollBehaviorY = 'contain';
+    } else {
+      document.body.style.overscrollBehaviorY = '';
+    }
+    return () => { document.body.style.overscrollBehaviorY = ''; };
+  }, [isEditMode]);
+
   // Whether a drag or drop animation is actively happening
   const isActiveDrag = dragState.phase === 'dragging' || dragState.phase === 'dropping';
 
