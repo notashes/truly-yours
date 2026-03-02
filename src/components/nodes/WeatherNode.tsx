@@ -49,9 +49,9 @@ export function WeatherNodeComponent({ node, onSelect }: WeatherNodeProps) {
         {!matchedRange && (
           <div className="w-full flex flex-col gap-2.5 mt-2">
             <p className="text-on-surface-variant text-sm">Choose what feels right:</p>
-            {node.temperatureRanges.map(range => (
+            {node.temperatureRanges.map((range, idx) => (
               <OptionCard
-                key={range.nextNodeId}
+                key={idx}
                 label={range.label}
                 onClick={() => onSelect(range.nextNodeId)}
               />
@@ -67,9 +67,9 @@ export function WeatherNodeComponent({ node, onSelect }: WeatherNodeProps) {
       <h2 className="text-[22px] font-semibold text-on-surface leading-tight">{node.title}</h2>
       <p className="text-on-surface-variant text-sm">Couldn't check the weather. What does it feel like?</p>
       <div className="w-full flex flex-col gap-2.5">
-        {node.temperatureRanges.map(range => (
+        {node.temperatureRanges.map((range, idx) => (
           <OptionCard
-            key={range.nextNodeId}
+            key={idx}
             label={range.label}
             onClick={() => onSelect(range.nextNodeId)}
           />

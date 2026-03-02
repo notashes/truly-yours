@@ -16,9 +16,9 @@ export function QuestionNodeComponent({ node, onSelect }: QuestionNodeProps) {
       )}
 
       <div className="w-full flex flex-col gap-2.5 mt-3">
-        {node.options.map(option => (
+        {node.options.map((option, idx) => (
           <OptionCard
-            key={option.nextNodeId}
+            key={idx}
             label={option.label}
             emoji={option.emoji}
             onClick={() => onSelect(option.nextNodeId)}
