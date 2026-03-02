@@ -35,6 +35,7 @@ interface ContentStoreValue {
   saveMode: (mode: Mode) => void;
   deleteMode: (id: string) => void;
   setActiveMode: (id: string | null) => void;
+  reorderProtocols: (orderedIds: string[]) => void;
   exportBackup: () => string;
   importBackup: (json: string) => boolean;
 }
@@ -47,6 +48,7 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
   const [referenceLists, setReferenceLists] = useLocalStorage<Record<string, ReferenceList>>('ty_reference_lists', {});
   const [modes, setModes] = useLocalStorage<Record<string, Mode>>('ty_modes', {});
   const [activeModeId, setActiveModeId] = useLocalStorage<string | null>('ty_active_mode', null);
+  const [defaultProtocolOrder, setDefaultProtocolOrder] = useLocalStorage<string[]>('ty_default_protocol_order', []);
 
   const allProtocols = useMemo<Record<string, Protocol>>(() => {
     const merged = { ...defaultProtocolsMap };
@@ -66,19 +68,37 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
   }, [activeModeId, modes]);
 
   const visibleProtocols = useMemo<Protocol[]>(() => {
-    const modeProtos = currentMode.protocolIds
-      .map(id => allProtocols[id])
-      .filter((p): p is Protocol => p != null && !p.isSubProtocol);
-
     if (currentMode.id === '__default__') {
+      // If user has a custom order for default mode, use it
+      if (defaultProtocolOrder.length > 0) {
+        const ordered = defaultProtocolOrder
+          .map(id => allProtocols[id])
+          .filter((p): p is Protocol => p != null && !p.isSubProtocol);
+        // Append any new protocols not yet in the saved order
+        const orderedSet = new Set(defaultProtocolOrder);
+        const modeIdSet = new Set(currentMode.protocolIds);
+        const newModeProtos = currentMode.protocolIds
+          .filter(id => !orderedSet.has(id))
+          .map(id => allProtocols[id])
+          .filter((p): p is Protocol => p != null && !p.isSubProtocol);
+        const newExtras = Object.values(userProtocols)
+          .filter(p => !p.isSubProtocol && !orderedSet.has(p.id) && !modeIdSet.has(p.id));
+        return [...ordered, ...newModeProtos, ...newExtras];
+      }
+      // Default: mode protos + extras
+      const modeProtos = currentMode.protocolIds
+        .map(id => allProtocols[id])
+        .filter((p): p is Protocol => p != null && !p.isSubProtocol);
       const modeIdSet = new Set(currentMode.protocolIds);
       const extras = Object.values(userProtocols)
         .filter(p => !p.isSubProtocol && !modeIdSet.has(p.id));
       return [...modeProtos, ...extras];
     }
 
-    return modeProtos;
-  }, [currentMode, allProtocols, userProtocols]);
+    return currentMode.protocolIds
+      .map(id => allProtocols[id])
+      .filter((p): p is Protocol => p != null && !p.isSubProtocol);
+  }, [currentMode, allProtocols, userProtocols, defaultProtocolOrder]);
 
   const visibleChecklists = useMemo<StandaloneChecklist[]>(() => {
     if (currentMode.checklistIds.length === 0) return Object.values(checklists);
@@ -162,6 +182,18 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
     setActiveModeId(id === '__default__' ? null : id);
   }, [setActiveModeId]);
 
+  const reorderProtocols = useCallback((orderedIds: string[]) => {
+    if (currentMode.id === '__default__') {
+      setDefaultProtocolOrder(orderedIds);
+    } else {
+      saveMode({
+        ...currentMode,
+        protocolIds: orderedIds,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+  }, [currentMode, setDefaultProtocolOrder, saveMode]);
+
   const exportBackup = useCallback(() => {
     return JSON.stringify({
       version: 1,
@@ -171,10 +203,11 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
       ty_reference_lists: referenceLists,
       ty_modes: modes,
       ty_active_mode: activeModeId,
+      ty_default_protocol_order: defaultProtocolOrder,
       ty_history: JSON.parse(localStorage.getItem('ty_history') || '[]'),
       ty_moods: JSON.parse(localStorage.getItem('ty_moods') || '[]'),
     }, null, 2);
-  }, [userProtocols, checklists, referenceLists, modes, activeModeId]);
+  }, [userProtocols, checklists, referenceLists, modes, activeModeId, defaultProtocolOrder]);
 
   const importBackup = useCallback((json: string): boolean => {
     try {
@@ -185,13 +218,14 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
       if (data.ty_reference_lists) setReferenceLists(data.ty_reference_lists);
       if (data.ty_modes) setModes(data.ty_modes);
       if (data.ty_active_mode !== undefined) setActiveModeId(data.ty_active_mode);
+      if (data.ty_default_protocol_order) setDefaultProtocolOrder(data.ty_default_protocol_order);
       if (data.ty_history) localStorage.setItem('ty_history', JSON.stringify(data.ty_history));
       if (data.ty_moods) localStorage.setItem('ty_moods', JSON.stringify(data.ty_moods));
       return true;
     } catch {
       return false;
     }
-  }, [setUserProtocols, setChecklists, setReferenceLists, setModes, setActiveModeId]);
+  }, [setUserProtocols, setChecklists, setReferenceLists, setModes, setActiveModeId, setDefaultProtocolOrder]);
 
   const value = useMemo<ContentStoreValue>(() => ({
     allProtocols,
@@ -212,6 +246,7 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
     saveMode,
     deleteMode,
     setActiveMode,
+    reorderProtocols,
     exportBackup,
     importBackup,
   }), [
@@ -219,7 +254,7 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
     referenceLists, allModes, currentMode, activeModeId,
     saveProtocol, deleteProtocol, duplicateProtocol,
     saveChecklist, deleteChecklist, saveReferenceList, deleteReferenceList,
-    saveMode, deleteMode, setActiveMode, exportBackup, importBackup,
+    saveMode, deleteMode, setActiveMode, reorderProtocols, exportBackup, importBackup,
   ]);
 
   return (

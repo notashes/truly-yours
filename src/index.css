@@ -115,6 +115,25 @@ body {
   animation: pulse-soft 2s ease-in-out infinite;
 }
 
+@keyframes wiggle {
+  0% { transform: rotate(-0.8deg); }
+  25% { transform: rotate(0.8deg); }
+  50% { transform: rotate(-0.6deg); }
+  75% { transform: rotate(0.6deg); }
+  100% { transform: rotate(-0.8deg); }
+}
+
+.animate-wiggle {
+  animation: wiggle 0.35s ease-in-out infinite;
+}
+
+/* Floating card during drag */
+.drag-lifted {
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.12),
+    0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
 /* Material ripple effect */
 .ripple {
   position: relative;
