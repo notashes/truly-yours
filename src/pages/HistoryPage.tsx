@@ -1,5 +1,6 @@
 import { useHistory } from '@/hooks/useHistory';
 import { useContentStore } from '@/store/useContentStore';
+import { CalendarDots } from '@/components/CalendarDots';
 
 export function HistoryPage() {
   const { runs } = useHistory();
@@ -9,8 +10,11 @@ export function HistoryPage() {
     <div className="px-5 pt-12 pb-6">
       <h1 className="text-[28px] font-bold text-on-surface tracking-tight mb-6">History</h1>
 
+      {/* Calendar dots view */}
+      <CalendarDots runs={runs} />
+
       {runs.length === 0 ? (
-        <div className="text-center py-20">
+        <div className="text-center py-12">
           <div className="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center mx-auto mb-4">
             <span className="text-3xl">📝</span>
           </div>
@@ -37,9 +41,9 @@ export function HistoryPage() {
                       {protocol?.name ?? run.protocolId}
                     </p>
                     <p className="text-xs text-on-surface-variant">
-                      {date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                      {date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
                       {' '}
-                      {date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                      {date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                   <div className="flex-shrink-0">

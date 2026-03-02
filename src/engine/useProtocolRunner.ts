@@ -61,6 +61,20 @@ function clearSavedState() {
   localStorage.removeItem(STORAGE_KEY);
 }
 
+/** Peek at saved runner state without loading it into React state.
+ *  Only returns protocol ID if there is meaningful progress (more than the start node). */
+export function getSavedRunnerProtocolId(): string | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as RunnerState;
+    if (data.status === 'running' && data.mainProtocolId && data.stack.length > 0 && data.nodesVisited.length > 1) {
+      return data.mainProtocolId;
+    }
+  } catch { /* corrupt */ }
+  return null;
+}
+
 export function useProtocolRunner(allProtocols: Record<string, Protocol>) {
   const [state, setState] = useState<RunnerState>({
     stack: [],
@@ -154,6 +168,21 @@ export function useProtocolRunner(allProtocols: Record<string, Protocol>) {
     setState(newState);
   }, [allProtocols]);
 
+  const resume = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as RunnerState;
+      if (saved.status !== 'running' || saved.stack.length === 0) return;
+      // Rebuild stack with latest protocol definitions where possible
+      const rebuiltStack = saved.stack.map(ctx => {
+        const latest = allProtocols[ctx.protocol.id];
+        return { ...ctx, protocol: latest ?? ctx.protocol };
+      });
+      setState({ ...saved, stack: rebuiltStack });
+    } catch { /* corrupt state, ignore */ }
+  }, [allProtocols]);
+
   const selectOption = useCallback((nextNodeId: string) => {
     advance(nextNodeId);
   }, [advance]);
@@ -242,6 +271,7 @@ export function useProtocolRunner(allProtocols: Record<string, Protocol>) {
     status: state.status,
     checklistResults: state.checklistResults,
     start,
+    resume,
     selectOption,
     completeInstruction,
     toggleChecklistItem,

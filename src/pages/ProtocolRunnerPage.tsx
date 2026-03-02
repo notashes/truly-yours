@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useContentStore } from '@/store/useContentStore';
-import { useProtocolRunner } from '@/engine/useProtocolRunner';
+import { useProtocolRunner, getSavedRunnerProtocolId } from '@/engine/useProtocolRunner';
 import { useHistory } from '@/hooks/useHistory';
 import { Header } from '@/components/layout/Header';
 import { InfoNodeComponent } from '@/components/nodes/InfoNode';
@@ -20,12 +20,20 @@ export function ProtocolRunnerPage() {
   const { allProtocols, allReferenceLists } = useContentStore();
 
   const runner = useProtocolRunner(allProtocols);
+  const [showResume, setShowResume] = useState<boolean | null>(null);
 
+  // Check for saved state on mount
   useEffect(() => {
-    if (protocolId && runner.status === 'idle') {
-      runner.start(protocolId);
+    if (protocolId && runner.status === 'idle' && showResume === null) {
+      const savedId = getSavedRunnerProtocolId();
+      if (savedId === protocolId) {
+        setShowResume(true);
+      } else {
+        setShowResume(false);
+        runner.start(protocolId);
+      }
     }
-  }, [protocolId, runner.status]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [protocolId, runner.status, showResume]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (runner.status === 'completed' || runner.status === 'stopped') {
@@ -40,6 +48,38 @@ export function ProtocolRunnerPage() {
       runner.reset();
     }
   }, [runner.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Resume prompt
+  if (showResume) {
+    const protocol = protocolId ? allProtocols[protocolId] : null;
+    return (
+      <div className="min-h-full flex flex-col items-center justify-center px-6 py-12 bg-surface">
+        <div className="animate-fade-in text-center max-w-sm">
+          <div className="text-5xl mb-5">{protocol?.emoji ?? '📋'}</div>
+          <h2 className="text-xl font-semibold text-on-surface mb-2">Welcome back</h2>
+          <p className="text-on-surface-variant text-sm mb-8 leading-relaxed">
+            You were in the middle of <span className="font-medium text-on-surface">{protocol?.name ?? 'this protocol'}</span>. Pick up where you left off?
+          </p>
+          <div className="flex flex-col gap-3 w-full">
+            <button
+              onClick={() => { setShowResume(false); runner.resume(); }}
+              className="w-full py-3.5 rounded-2xl bg-primary text-on-primary text-sm font-semibold
+                transition-all active:scale-[0.97]"
+            >
+              Continue where I left off
+            </button>
+            <button
+              onClick={() => { setShowResume(false); if (protocolId) runner.start(protocolId); }}
+              className="w-full py-3.5 rounded-2xl bg-surface-container-low text-on-surface text-sm font-medium
+                transition-all active:scale-[0.97]"
+            >
+              Start fresh
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!runner.currentNode) {
     return (

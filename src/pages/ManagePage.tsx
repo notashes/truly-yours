@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useContentStore } from '@/store/useContentStore';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import type { Protocol } from '@/types/protocol';
 
 type Tab = 'protocols' | 'checklists' | 'lists' | 'modes';
 
@@ -11,6 +12,7 @@ export function ManagePage() {
     allProtocols,
     allChecklists, allReferenceLists,
     allModes,
+    saveProtocol,
     deleteProtocol, duplicateProtocol,
     deleteChecklist, deleteReferenceList,
     deleteMode,
@@ -18,6 +20,44 @@ export function ManagePage() {
   const [tab, setTab] = useState<Tab>('protocols');
   const [showCreate, setShowCreate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ type: string; id: string; name: string } | null>(null);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
+
+  const exportProtocol = (proto: Protocol) => {
+    const data = JSON.stringify({ type: 'truly-yours-protocol', version: 1, protocol: proto }, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${proto.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportProtocol = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result as string);
+        if (data.type !== 'truly-yours-protocol' || !data.protocol?.id) {
+          setImportMsg('Not a valid protocol file');
+          setTimeout(() => setImportMsg(null), 3000);
+          return;
+        }
+        const proto = data.protocol as Protocol;
+        // Give it a new ID to avoid overwriting existing
+        const newId = `imported_${Date.now()}`;
+        const now = new Date().toISOString();
+        saveProtocol({ ...proto, id: newId, source: 'user', createdAt: now, updatedAt: now });
+        setImportMsg(`Imported "${proto.name}"`);
+        setTimeout(() => setImportMsg(null), 3000);
+      } catch {
+        setImportMsg('Invalid file');
+        setTimeout(() => setImportMsg(null), 3000);
+      }
+    };
+    reader.readAsText(file);
+  };
 
   const allProtoList = Object.values(allProtocols).filter(p => !p.isSubProtocol);
   const allCheckList = Object.values(allChecklists);
@@ -55,6 +95,32 @@ export function ManagePage() {
       {/* Protocols tab */}
       {tab === 'protocols' && (
         <div className="flex flex-col gap-2">
+          <button
+            onClick={() => importFileRef.current?.click()}
+            className="flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-surface-container-low
+              text-on-surface-variant text-sm font-medium hover:bg-surface-container transition-colors mb-1"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+            </svg>
+            Import Protocol
+          </button>
+          {importMsg && (
+            <p className={`text-sm text-center py-1 ${importMsg.startsWith('Imported') ? 'text-primary' : 'text-error'}`}>
+              {importMsg}
+            </p>
+          )}
+          <input
+            ref={importFileRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={e => {
+              const file = e.target.files?.[0];
+              if (file) handleImportProtocol(file);
+              e.target.value = '';
+            }}
+          />
           {allProtoList.length === 0 && (
             <p className="text-center text-on-surface-variant py-12">No protocols yet</p>
           )}
@@ -71,6 +137,15 @@ export function ManagePage() {
                   </p>
                 </div>
                 <div className="flex gap-1">
+                  <button
+                    onClick={() => exportProtocol(proto)}
+                    className="p-2 rounded-full hover:bg-surface-variant transition-colors"
+                    title="Share"
+                  >
+                    <svg className="w-5 h-5 text-on-surface-variant" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+                    </svg>
+                  </button>
                   <button
                     onClick={() => navigate(`/manage/protocols/${proto.id}/edit`)}
                     className="p-2 rounded-full hover:bg-surface-variant transition-colors"

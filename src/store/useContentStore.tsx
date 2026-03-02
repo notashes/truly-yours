@@ -1,7 +1,8 @@
 import { createContext, useContext, useMemo, useCallback, type ReactNode } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { protocols as defaultProtocolsMap, mainProtocols as defaultMainProtocols } from '@/protocols';
-import { PALETTE_STORAGE_KEY, applyPalette, type PaletteId } from '@/lib/theme';
+import { PALETTE_STORAGE_KEY, DARK_MODE_KEY, applyPalette, saveDarkMode, type PaletteId } from '@/lib/theme';
+import { applyTextSize, type TextSizeLevel } from '@/lib/textSize';
 import type { Protocol } from '@/types/protocol';
 import type { ReferenceList, StandaloneChecklist, Mode, HomeItem } from '@/types/content';
 
@@ -310,6 +311,9 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
       ty_default_protocol_order: defaultProtocolOrder,
       ty_home_order: homeOrder,
       ty_active_palette: localStorage.getItem(PALETTE_STORAGE_KEY) || null,
+      ty_dark_mode: localStorage.getItem(DARK_MODE_KEY) || null,
+      ty_text_size: localStorage.getItem('ty_text_size') || null,
+      ty_reminders: JSON.parse(localStorage.getItem('ty_reminders') || '[]'),
       ty_history: JSON.parse(localStorage.getItem('ty_history') || '[]'),
       ty_moods: JSON.parse(localStorage.getItem('ty_moods') || '[]'),
     }, null, 2);
@@ -326,10 +330,19 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
       if (data.ty_active_mode !== undefined) setActiveModeId(data.ty_active_mode);
       if (data.ty_default_protocol_order) setDefaultProtocolOrder(data.ty_default_protocol_order);
       if (data.ty_home_order) setHomeOrder(data.ty_home_order);
+      if (data.ty_dark_mode != null) {
+        localStorage.setItem(DARK_MODE_KEY, data.ty_dark_mode);
+        saveDarkMode(data.ty_dark_mode === 'true');
+      }
       if (data.ty_active_palette) {
         localStorage.setItem(PALETTE_STORAGE_KEY, data.ty_active_palette);
         applyPalette(data.ty_active_palette as PaletteId);
       }
+      if (data.ty_text_size) {
+        localStorage.setItem('ty_text_size', data.ty_text_size);
+        applyTextSize(data.ty_text_size as TextSizeLevel);
+      }
+      if (data.ty_reminders) localStorage.setItem('ty_reminders', JSON.stringify(data.ty_reminders));
       if (data.ty_history) localStorage.setItem('ty_history', JSON.stringify(data.ty_history));
       if (data.ty_moods) localStorage.setItem('ty_moods', JSON.stringify(data.ty_moods));
       return true;

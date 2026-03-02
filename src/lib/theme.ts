@@ -6,10 +6,13 @@ export interface Palette {
   emoji: string;
   description: string;
   themeColor: string;
+  darkThemeColor: string;
   colors: Record<string, string>;
+  darkColors: Record<string, string>;
 }
 
 export const PALETTE_STORAGE_KEY = 'ty_active_palette';
+export const DARK_MODE_KEY = 'ty_dark_mode';
 export const DEFAULT_PALETTE_ID: PaletteId = 'sage-garden';
 
 export const PALETTES: Palette[] = [
@@ -19,6 +22,7 @@ export const PALETTES: Palette[] = [
     emoji: '🌿',
     description: 'Calming green — nature-inspired',
     themeColor: '#F6F8F3',
+    darkThemeColor: '#1A1C18',
     colors: {
       'surface': '#F6F8F3',
       'surface-dim': '#E3E8DC',
@@ -45,6 +49,32 @@ export const PALETTES: Palette[] = [
       'error': '#BA1A1A',
       'error-container': '#FFDAD6',
     },
+    darkColors: {
+      'surface': '#1A1C18',
+      'surface-dim': '#121410',
+      'surface-container': '#1E201C',
+      'surface-container-low': '#1A1C18',
+      'surface-container-high': '#282B24',
+      'surface-variant': '#434840',
+      'primary': '#8FB58F',
+      'primary-light': '#3D5A3D',
+      'primary-container': '#2A4A2A',
+      'on-primary': '#1A1C18',
+      'on-primary-container': '#C8DCC8',
+      'secondary': '#8FA18F',
+      'secondary-container': '#2A3C2A',
+      'on-secondary-container': '#C4D8C4',
+      'tertiary': '#8B9A7E',
+      'tertiary-container': '#2E3D24',
+      'on-surface': '#E3E8DC',
+      'on-surface-variant': '#C4CABC',
+      'outline': '#8D9286',
+      'outline-variant': '#434840',
+      'success': '#6BBF66',
+      'success-container': '#1A3A18',
+      'error': '#FFB4AB',
+      'error-container': '#93000A',
+    },
   },
   {
     id: 'warm-earth',
@@ -52,6 +82,7 @@ export const PALETTES: Palette[] = [
     emoji: '🏜️',
     description: 'Clay & terracotta on warm cream',
     themeColor: '#FDF8F3',
+    darkThemeColor: '#1C1B18',
     colors: {
       'surface': '#FDF8F3',
       'surface-dim': '#EDE7E0',
@@ -78,6 +109,32 @@ export const PALETTES: Palette[] = [
       'error': '#BA1A1A',
       'error-container': '#FFDAD6',
     },
+    darkColors: {
+      'surface': '#1C1B18',
+      'surface-dim': '#141310',
+      'surface-container': '#21201C',
+      'surface-container-low': '#1C1B18',
+      'surface-container-high': '#2C2A26',
+      'surface-variant': '#4A4740',
+      'primary': '#D4957A',
+      'primary-light': '#5A3020',
+      'primary-container': '#4A2818',
+      'on-primary': '#1C1B18',
+      'on-primary-container': '#F0D5C7',
+      'secondary': '#A5897A',
+      'secondary-container': '#3A2820',
+      'on-secondary-container': '#E8D0C4',
+      'tertiary': '#9A8870',
+      'tertiary-container': '#3A3020',
+      'on-surface': '#EDE7E0',
+      'on-surface-variant': '#CCC6BD',
+      'outline': '#948F88',
+      'outline-variant': '#4A4740',
+      'success': '#6BBF66',
+      'success-container': '#1A3A18',
+      'error': '#FFB4AB',
+      'error-container': '#93000A',
+    },
   },
   {
     id: 'ocean-calm',
@@ -85,6 +142,7 @@ export const PALETTES: Palette[] = [
     emoji: '🌊',
     description: 'Dusty blue for calm focus',
     themeColor: '#F3F6F8',
+    darkThemeColor: '#181C1E',
     colors: {
       'surface': '#F3F6F8',
       'surface-dim': '#DEE4E8',
@@ -111,6 +169,32 @@ export const PALETTES: Palette[] = [
       'error': '#BA1A1A',
       'error-container': '#FFDAD6',
     },
+    darkColors: {
+      'surface': '#181C1E',
+      'surface-dim': '#101416',
+      'surface-container': '#1C2124',
+      'surface-container-low': '#181C1E',
+      'surface-container-high': '#262C30',
+      'surface-variant': '#40474A',
+      'primary': '#88A8BE',
+      'primary-light': '#2A4458',
+      'primary-container': '#1C3A50',
+      'on-primary': '#181C1E',
+      'on-primary-container': '#C2D4E0',
+      'secondary': '#809098',
+      'secondary-container': '#243038',
+      'on-secondary-container': '#BCD0D8',
+      'tertiary': '#849498',
+      'tertiary-container': '#263034',
+      'on-surface': '#DEE4E8',
+      'on-surface-variant': '#BFC8CE',
+      'outline': '#8A9298',
+      'outline-variant': '#40474A',
+      'success': '#6BBF66',
+      'success-container': '#1A3A18',
+      'error': '#FFB4AB',
+      'error-container': '#93000A',
+    },
   },
   {
     id: 'soft-blossom',
@@ -118,6 +202,7 @@ export const PALETTES: Palette[] = [
     emoji: '🌸',
     description: 'Dusty rose on blush cream',
     themeColor: '#F8F3F6',
+    darkThemeColor: '#1C181A',
     colors: {
       'surface': '#F8F3F6',
       'surface-dim': '#EBE2E7',
@@ -144,20 +229,49 @@ export const PALETTES: Palette[] = [
       'error': '#BA1A1A',
       'error-container': '#FFDAD6',
     },
+    darkColors: {
+      'surface': '#1C181A',
+      'surface-dim': '#141012',
+      'surface-container': '#211C1F',
+      'surface-container-low': '#1C181A',
+      'surface-container-high': '#2C2628',
+      'surface-variant': '#4A4346',
+      'primary': '#BA96A8',
+      'primary-light': '#4E3040',
+      'primary-container': '#422638',
+      'on-primary': '#1C181A',
+      'on-primary-container': '#DEC8D4',
+      'secondary': '#9E8A92',
+      'secondary-container': '#362830',
+      'on-secondary-container': '#DCC8D0',
+      'tertiary': '#9A8A86',
+      'tertiary-container': '#362C28',
+      'on-surface': '#EBE2E7',
+      'on-surface-variant': '#CEC4C8',
+      'outline': '#968C90',
+      'outline-variant': '#4A4346',
+      'success': '#6BBF66',
+      'success-container': '#1A3A18',
+      'error': '#FFB4AB',
+      'error-container': '#93000A',
+    },
   },
 ];
 
 export function applyPalette(paletteId: PaletteId): void {
   const palette = PALETTES.find(p => p.id === paletteId) ?? PALETTES[0];
+  const dark = isDarkMode();
+  const colors = dark ? palette.darkColors : palette.colors;
   const root = document.documentElement;
 
-  for (const [name, value] of Object.entries(palette.colors)) {
+  for (const [name, value] of Object.entries(colors)) {
     root.style.setProperty(`--color-${name}`, value);
   }
 
+  const themeColor = dark ? palette.darkThemeColor : palette.themeColor;
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    meta.setAttribute('content', palette.themeColor);
+    meta.setAttribute('content', themeColor);
   }
 }
 
@@ -175,4 +289,20 @@ export function savePaletteId(id: PaletteId): void {
   try {
     localStorage.setItem(PALETTE_STORAGE_KEY, id);
   } catch { /* localStorage unavailable */ }
+}
+
+export function isDarkMode(): boolean {
+  try {
+    return localStorage.getItem(DARK_MODE_KEY) === 'true';
+  } catch { return false; }
+}
+
+export function saveDarkMode(dark: boolean): void {
+  try {
+    localStorage.setItem(DARK_MODE_KEY, dark ? 'true' : 'false');
+  } catch { /* localStorage unavailable */ }
+}
+
+export function applyTheme(): void {
+  applyPalette(getStoredPaletteId());
 }
