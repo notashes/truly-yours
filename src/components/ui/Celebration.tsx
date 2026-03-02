@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { getEncouragement } from '@/lib/encouragements';
 
-const CONFETTI_COLORS = ['#D4795C', '#8B5CF6', '#10B981', '#3B82F6', '#EC4899', '#F59E0B'];
+// Muted, AuDHD-friendly confetti — no neons or bright yellow
+const CONFETTI_COLORS = ['#C07A5F', '#9B8EC4', '#6B9F6E', '#7BA7C9', '#C4919A', '#B89F76'];
 
 interface ConfettiPiece {
   id: number;

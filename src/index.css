@@ -1,31 +1,34 @@
 @import "tailwindcss";
 
 @theme {
-  /* Material You inspired warm palette */
-  --color-surface: #FFFBFE;
-  --color-surface-dim: #F4EFF4;
-  --color-surface-container: #F3EDF7;
-  --color-surface-container-low: #F7F2FA;
-  --color-surface-container-high: #ECE6F0;
-  --color-surface-variant: #E7E0EC;
+  /* AuDHD-friendly warm earth palette
+     Research: warm neutrals + muted earth tones reduce sensory overload
+     Grandgeorge & Masataka 2016, Nature 2025, Heerwagen & Gregory 2008 */
+  --color-surface: #FDF8F3;
+  --color-surface-dim: #EDE7E0;
+  --color-surface-container: #F3ECE4;
+  --color-surface-container-low: #F8F2EB;
+  --color-surface-container-high: #E8E1D8;
+  --color-surface-variant: #DED7CD;
 
-  --color-primary: #D4795C;
-  --color-primary-light: #FCDDD1;
-  --color-primary-container: #FFE0D6;
+  --color-primary: #C07A5F;
+  --color-primary-light: #F0D5C7;
+  --color-primary-container: #FADDD0;
   --color-on-primary: #FFFFFF;
-  --color-on-primary-container: #3B0E00;
+  --color-on-primary-container: #351208;
 
-  --color-secondary: #77574B;
-  --color-secondary-container: #FFDBD0;
-  --color-on-secondary-container: #2C160D;
+  --color-secondary: #8B6F5E;
+  --color-secondary-container: #F2DDD4;
+  --color-on-secondary-container: #2A1912;
 
-  --color-tertiary: #6B5E2F;
-  --color-tertiary-container: #F5E2A7;
+  /* Warm umber — replaces yellow-gold (yellow is #1 avoided ASD color) */
+  --color-tertiary: #7D6B50;
+  --color-tertiary-container: #E8D9C4;
 
-  --color-on-surface: #1D1B20;
-  --color-on-surface-variant: #49454F;
-  --color-outline: #79747E;
-  --color-outline-variant: #CAC4D0;
+  --color-on-surface: #1C1B18;
+  --color-on-surface-variant: #4A4740;
+  --color-outline: #7B7770;
+  --color-outline-variant: #CCC6BD;
 
   --color-success: #3B6939;
   --color-success-container: #BCEDB6;
