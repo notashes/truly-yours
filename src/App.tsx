@@ -1,4 +1,5 @@
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { HashRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { HomePage } from '@/pages/HomePage';
 import { ProtocolRunnerPage } from '@/pages/ProtocolRunnerPage';
@@ -13,12 +14,33 @@ import { ChecklistBuilderPage } from '@/pages/ChecklistBuilderPage';
 import { StandaloneChecklistRunnerPage } from '@/pages/StandaloneChecklistRunnerPage';
 import { ProtocolBuilderPage } from '@/pages/ProtocolBuilderPage';
 import { ModeEditorPage } from '@/pages/ModeEditorPage';
-import { ContentStoreProvider } from '@/store/useContentStore';
+import { ContentStoreProvider, useContentStore } from '@/store/useContentStore';
+import { setupFileHandler } from '@/lib/fileHandler';
+import { parseProtocolFile } from '@/lib/protocolImport';
+
+function FileHandlerSetup() {
+  const { saveProtocol } = useContentStore();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setupFileHandler(async (file: File) => {
+      const text = await file.text();
+      const result = parseProtocolFile(text);
+      if (result.success && result.protocol) {
+        saveProtocol(result.protocol);
+        navigate('/manage');
+      }
+    });
+  }, [saveProtocol, navigate]);
+
+  return null;
+}
 
 function App() {
   return (
     <ContentStoreProvider>
     <HashRouter>
+      <FileHandlerSetup />
       <Routes>
         <Route element={<AppShell />}>
           <Route path="/" element={<HomePage />} />

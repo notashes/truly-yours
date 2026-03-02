@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useContentStore } from '@/store/useContentStore';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import { parseProtocolFile } from '@/lib/protocolImport';
 import type { Protocol } from '@/types/protocol';
 
 type Tab = 'protocols' | 'checklists' | 'lists' | 'modes';
@@ -23,40 +24,47 @@ export function ManagePage() {
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
 
-  const exportProtocol = (proto: Protocol) => {
+  const shareProtocol = async (proto: Protocol) => {
     const data = JSON.stringify({ type: 'truly-yours-protocol', version: 1, protocol: proto }, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+    const file = new File(
+      [data],
+      `${proto.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.typrotocol`,
+      { type: 'application/json' },
+    );
+
+    // Try native share (mobile, some desktops)
+    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({
+          title: `${proto.emoji} ${proto.name}`,
+          text: `Check out my Truly Yours protocol: ${proto.name}`,
+          files: [file],
+        });
+        return;
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') return; // user cancelled
+      }
+    }
+
+    // Fallback: download
+    const url = URL.createObjectURL(file);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${proto.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.json`;
+    a.download = file.name;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const handleImportProtocol = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const data = JSON.parse(reader.result as string);
-        if (data.type !== 'truly-yours-protocol' || !data.protocol?.id) {
-          setImportMsg('Not a valid protocol file');
-          setTimeout(() => setImportMsg(null), 3000);
-          return;
-        }
-        const proto = data.protocol as Protocol;
-        // Give it a new ID to avoid overwriting existing
-        const newId = `imported_${Date.now()}`;
-        const now = new Date().toISOString();
-        saveProtocol({ ...proto, id: newId, source: 'user', createdAt: now, updatedAt: now });
-        setImportMsg(`Imported "${proto.name}"`);
-        setTimeout(() => setImportMsg(null), 3000);
-      } catch {
-        setImportMsg('Invalid file');
-        setTimeout(() => setImportMsg(null), 3000);
-      }
-    };
-    reader.readAsText(file);
+  const handleImportProtocol = async (file: File) => {
+    const text = await file.text();
+    const result = parseProtocolFile(text);
+    if (result.success && result.protocol) {
+      saveProtocol(result.protocol);
+      setImportMsg(`Imported "${result.protocol.name}"`);
+    } else {
+      setImportMsg(result.error ?? 'Invalid file');
+    }
+    setTimeout(() => setImportMsg(null), 3000);
   };
 
   const allProtoList = Object.values(allProtocols).filter(p => !p.isSubProtocol);
@@ -113,7 +121,7 @@ export function ManagePage() {
           <input
             ref={importFileRef}
             type="file"
-            accept=".json"
+            accept=".json,.typrotocol"
             className="hidden"
             onChange={e => {
               const file = e.target.files?.[0];
@@ -138,7 +146,7 @@ export function ManagePage() {
                 </div>
                 <div className="flex gap-1">
                   <button
-                    onClick={() => exportProtocol(proto)}
+                    onClick={() => shareProtocol(proto)}
                     className="p-2 rounded-full hover:bg-surface-variant transition-colors"
                     title="Share"
                   >
