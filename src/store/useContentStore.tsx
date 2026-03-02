@@ -35,6 +35,8 @@ interface ContentStoreValue {
   saveMode: (mode: Mode) => void;
   deleteMode: (id: string) => void;
   setActiveMode: (id: string | null) => void;
+  exportBackup: () => string;
+  importBackup: (json: string) => boolean;
 }
 
 const ContentStoreContext = createContext<ContentStoreValue | null>(null);
@@ -160,6 +162,37 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
     setActiveModeId(id === '__default__' ? null : id);
   }, [setActiveModeId]);
 
+  const exportBackup = useCallback(() => {
+    return JSON.stringify({
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      ty_user_protocols: userProtocols,
+      ty_user_checklists: checklists,
+      ty_reference_lists: referenceLists,
+      ty_modes: modes,
+      ty_active_mode: activeModeId,
+      ty_history: JSON.parse(localStorage.getItem('ty_history') || '[]'),
+      ty_moods: JSON.parse(localStorage.getItem('ty_moods') || '[]'),
+    }, null, 2);
+  }, [userProtocols, checklists, referenceLists, modes, activeModeId]);
+
+  const importBackup = useCallback((json: string): boolean => {
+    try {
+      const data = JSON.parse(json);
+      if (!data.version) return false;
+      if (data.ty_user_protocols) setUserProtocols(data.ty_user_protocols);
+      if (data.ty_user_checklists) setChecklists(data.ty_user_checklists);
+      if (data.ty_reference_lists) setReferenceLists(data.ty_reference_lists);
+      if (data.ty_modes) setModes(data.ty_modes);
+      if (data.ty_active_mode !== undefined) setActiveModeId(data.ty_active_mode);
+      if (data.ty_history) localStorage.setItem('ty_history', JSON.stringify(data.ty_history));
+      if (data.ty_moods) localStorage.setItem('ty_moods', JSON.stringify(data.ty_moods));
+      return true;
+    } catch {
+      return false;
+    }
+  }, [setUserProtocols, setChecklists, setReferenceLists, setModes, setActiveModeId]);
+
   const value = useMemo<ContentStoreValue>(() => ({
     allProtocols,
     visibleProtocols,
@@ -179,12 +212,14 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
     saveMode,
     deleteMode,
     setActiveMode,
+    exportBackup,
+    importBackup,
   }), [
     allProtocols, visibleProtocols, checklists, visibleChecklists,
     referenceLists, allModes, currentMode, activeModeId,
     saveProtocol, deleteProtocol, duplicateProtocol,
     saveChecklist, deleteChecklist, saveReferenceList, deleteReferenceList,
-    saveMode, deleteMode, setActiveMode,
+    saveMode, deleteMode, setActiveMode, exportBackup, importBackup,
   ]);
 
   return (
