@@ -26,15 +26,15 @@ export function ManagePage() {
 
   const shareProtocol = async (proto: Protocol) => {
     const data = JSON.stringify({ type: 'truly-yours-protocol', version: 1, protocol: proto }, null, 2);
-    const file = new File(
-      [data],
-      `${proto.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.typrotocol`,
-      { type: 'application/json' },
-    );
+    const fileName = `${proto.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.typrotocol`;
 
-    // Try native share (mobile, some desktops)
-    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+    // Try native share — attempt directly and catch errors
+    if (navigator.share) {
       try {
+        // Use .json extension for broader compatibility with share targets
+        const file = new File([data], fileName.replace('.typrotocol', '.json'), {
+          type: 'application/json',
+        });
         await navigator.share({
           title: `${proto.emoji} ${proto.name}`,
           text: `Check out my Truly Yours protocol: ${proto.name}`,
@@ -43,14 +43,16 @@ export function ManagePage() {
         return;
       } catch (e) {
         if ((e as Error).name === 'AbortError') return; // user cancelled
+        // Share failed (unsupported file type, etc.) — fall through to download
       }
     }
 
-    // Fallback: download
-    const url = URL.createObjectURL(file);
+    // Fallback: download as .typrotocol
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = file.name;
+    a.download = fileName;
     a.click();
     URL.revokeObjectURL(url);
   };
