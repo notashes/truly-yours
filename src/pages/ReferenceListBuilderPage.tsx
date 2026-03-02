@@ -6,6 +6,133 @@ import { BigButton } from '@/components/ui/BigButton';
 
 const EMOJI_OPTIONS = ['📝', '👕', '👗', '🧥', '👜', '🎒', '🍽️', '💊', '🧴', '🏠', '📦', '🛒', '⭐', '💡', '🎯', '📌'];
 
+function countAllItems(items: ReferenceListItem[]): number {
+  let count = 0;
+  for (const item of items) {
+    count++;
+    if (item.children) count += countAllItems(item.children);
+  }
+  return count;
+}
+
+function updateItemInTree(items: ReferenceListItem[], itemId: string, updates: Partial<ReferenceListItem>): ReferenceListItem[] {
+  return items.map(item => {
+    if (item.id === itemId) return { ...item, ...updates };
+    if (item.children) return { ...item, children: updateItemInTree(item.children, itemId, updates) };
+    return item;
+  });
+}
+
+function removeItemFromTree(items: ReferenceListItem[], itemId: string): ReferenceListItem[] {
+  return items
+    .filter(item => item.id !== itemId)
+    .map(item => item.children ? { ...item, children: removeItemFromTree(item.children, itemId) } : item);
+}
+
+function addChildToItem(items: ReferenceListItem[], parentId: string, child: ReferenceListItem): ReferenceListItem[] {
+  return items.map(item => {
+    if (item.id === parentId) {
+      return { ...item, children: [...(item.children ?? []), child] };
+    }
+    if (item.children) return { ...item, children: addChildToItem(item.children, parentId, child) };
+    return item;
+  });
+}
+
+function ItemEditor({ item, onUpdate, onRemove, onAddChild, onMoveUp, onMoveDown, isFirst, isLast, depth = 0 }: {
+  item: ReferenceListItem;
+  onUpdate: (id: string, updates: Partial<ReferenceListItem>) => void;
+  onRemove: (id: string) => void;
+  onAddChild: (parentId: string) => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  isFirst: boolean;
+  isLast: boolean;
+  depth?: number;
+}) {
+  const hasChildren = item.children && item.children.length > 0;
+
+  return (
+    <>
+      <div
+        className="flex items-center gap-2 bg-surface-container-low rounded-2xl p-3"
+        style={depth > 0 ? { marginLeft: `${depth * 16}px` } : undefined}
+      >
+        <div className="flex flex-col gap-0.5">
+          <button onClick={onMoveUp} disabled={isFirst}
+            className="text-on-surface-variant disabled:opacity-20 p-0.5">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+            </svg>
+          </button>
+          <button onClick={onMoveDown} disabled={isLast}
+            className="text-on-surface-variant disabled:opacity-20 p-0.5">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex-1 min-w-0">
+          <input
+            type="text"
+            value={item.label}
+            onChange={e => onUpdate(item.id, { label: e.target.value })}
+            className="w-full bg-transparent text-sm text-on-surface outline-none font-medium"
+            placeholder="Item name"
+          />
+          <input
+            type="text"
+            value={item.notes ?? ''}
+            onChange={e => onUpdate(item.id, { notes: e.target.value || undefined })}
+            placeholder="Notes (optional)"
+            className="w-full bg-transparent text-xs text-on-surface-variant outline-none mt-0.5"
+          />
+        </div>
+        {depth === 0 && (
+          <button
+            onClick={() => onAddChild(item.id)}
+            className="p-1.5 rounded-full hover:bg-primary-container transition-colors flex-shrink-0"
+            title="Add sub-item"
+          >
+            <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+          </button>
+        )}
+        <button onClick={() => onRemove(item.id)} className="p-1.5 rounded-full hover:bg-error-container transition-colors flex-shrink-0">
+          <svg className="w-4 h-4 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      {hasChildren && item.children!.map((child, ci) => (
+        <ItemEditor
+          key={child.id}
+          item={child}
+          onUpdate={onUpdate}
+          onRemove={onRemove}
+          onAddChild={onAddChild}
+          onMoveUp={() => {
+            if (ci === 0) return;
+            const arr = [...item.children!];
+            [arr[ci - 1], arr[ci]] = [arr[ci], arr[ci - 1]];
+            onUpdate(item.id, { children: arr });
+          }}
+          onMoveDown={() => {
+            if (ci === item.children!.length - 1) return;
+            const arr = [...item.children!];
+            [arr[ci], arr[ci + 1]] = [arr[ci + 1], arr[ci]];
+            onUpdate(item.id, { children: arr });
+          }}
+          isFirst={ci === 0}
+          isLast={ci === item.children!.length - 1}
+          depth={depth + 1}
+        />
+      ))}
+    </>
+  );
+}
+
 export function ReferenceListBuilderPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -34,12 +161,17 @@ export function ReferenceListBuilderPage() {
     setNewItemLabel('');
   };
 
-  const removeItem = (itemId: string) => {
-    setItems(prev => prev.filter(i => i.id !== itemId));
+  const handleUpdate = (itemId: string, updates: Partial<ReferenceListItem>) => {
+    setItems(prev => updateItemInTree(prev, itemId, updates));
   };
 
-  const updateItem = (itemId: string, updates: Partial<ReferenceListItem>) => {
-    setItems(prev => prev.map(i => i.id === itemId ? { ...i, ...updates } : i));
+  const handleRemove = (itemId: string) => {
+    setItems(prev => removeItemFromTree(prev, itemId));
+  };
+
+  const handleAddChild = (parentId: string) => {
+    const child: ReferenceListItem = { id: crypto.randomUUID(), label: '' };
+    setItems(prev => addChildToItem(prev, parentId, child));
   };
 
   const moveItem = (index: number, direction: -1 | 1) => {
@@ -67,6 +199,8 @@ export function ReferenceListBuilderPage() {
     saveReferenceList(list);
     navigate('/manage', { replace: true });
   };
+
+  const totalItems = countAllItems(items);
 
   return (
     <div className="px-5 pt-12 pb-6">
@@ -125,46 +259,21 @@ export function ReferenceListBuilderPage() {
 
       {/* Items */}
       <div className="mb-6">
-        <label className="text-sm font-medium text-on-surface-variant mb-2 block">Items ({items.length})</label>
+        <label className="text-sm font-medium text-on-surface-variant mb-2 block">Items ({totalItems})</label>
 
         <div className="flex flex-col gap-2 mb-3">
           {items.map((item, index) => (
-            <div key={item.id} className="flex items-center gap-2 bg-surface-container-low rounded-2xl p-3">
-              <div className="flex flex-col gap-0.5">
-                <button onClick={() => moveItem(index, -1)} disabled={index === 0}
-                  className="text-on-surface-variant disabled:opacity-20 p-0.5">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
-                  </svg>
-                </button>
-                <button onClick={() => moveItem(index, 1)} disabled={index === items.length - 1}
-                  className="text-on-surface-variant disabled:opacity-20 p-0.5">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                  </svg>
-                </button>
-              </div>
-              <div className="flex-1 min-w-0">
-                <input
-                  type="text"
-                  value={item.label}
-                  onChange={e => updateItem(item.id, { label: e.target.value })}
-                  className="w-full bg-transparent text-sm text-on-surface outline-none font-medium"
-                />
-                <input
-                  type="text"
-                  value={item.notes ?? ''}
-                  onChange={e => updateItem(item.id, { notes: e.target.value || undefined })}
-                  placeholder="Notes (optional)"
-                  className="w-full bg-transparent text-xs text-on-surface-variant outline-none mt-0.5"
-                />
-              </div>
-              <button onClick={() => removeItem(item.id)} className="p-1.5 rounded-full hover:bg-error-container transition-colors flex-shrink-0">
-                <svg className="w-4 h-4 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+            <ItemEditor
+              key={item.id}
+              item={item}
+              onUpdate={handleUpdate}
+              onRemove={handleRemove}
+              onAddChild={handleAddChild}
+              onMoveUp={() => moveItem(index, -1)}
+              onMoveDown={() => moveItem(index, 1)}
+              isFirst={index === 0}
+              isLast={index === items.length - 1}
+            />
           ))}
         </div>
 

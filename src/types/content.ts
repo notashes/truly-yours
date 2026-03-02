@@ -7,6 +7,7 @@ export interface ReferenceListItem {
   label: string;
   emoji?: string;
   notes?: string;
+  children?: ReferenceListItem[];
 }
 
 export interface ReferenceList {

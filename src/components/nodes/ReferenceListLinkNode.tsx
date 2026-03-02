@@ -1,9 +1,30 @@
 import { useState } from 'react';
 import type { ReferenceListLinkNode } from '@/types/protocol';
-import type { ReferenceList } from '@/types/content';
+import type { ReferenceList, ReferenceListItem } from '@/types/content';
 import { BigButton } from '@/components/ui/BigButton';
 import { EncouragementBanner } from '@/components/ui/EncouragementBanner';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+
+function RefItemRow({ item, depth = 0 }: { item: ReferenceListItem; depth?: number }) {
+  const hasChildren = item.children && item.children.length > 0;
+  return (
+    <>
+      <div
+        className="flex items-center gap-3 p-3 bg-surface-container-low rounded-2xl"
+        style={depth > 0 ? { marginLeft: `${depth * 20}px` } : undefined}
+      >
+        {item.emoji && <span className="text-lg">{item.emoji}</span>}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-on-surface">{item.label}</p>
+          {item.notes && <p className="text-xs text-on-surface-variant mt-0.5">{item.notes}</p>}
+        </div>
+      </div>
+      {hasChildren && item.children!.map(child => (
+        <RefItemRow key={child.id} item={child} depth={depth + 1} />
+      ))}
+    </>
+  );
+}
 
 interface Props {
   node: ReferenceListLinkNode;
@@ -46,13 +67,7 @@ export function ReferenceListLinkNodeComponent({ node, referenceList, onComplete
         <BottomSheet open={showList} onClose={() => setShowList(false)} title={referenceList.name}>
           <div className="flex flex-col gap-2">
             {referenceList.items.map(item => (
-              <div key={item.id} className="flex items-center gap-3 p-3 bg-surface-container-low rounded-2xl">
-                {item.emoji && <span className="text-lg">{item.emoji}</span>}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-on-surface">{item.label}</p>
-                  {item.notes && <p className="text-xs text-on-surface-variant mt-0.5">{item.notes}</p>}
-                </div>
-              </div>
+              <RefItemRow key={item.id} item={item} />
             ))}
           </div>
         </BottomSheet>

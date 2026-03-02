@@ -1,5 +1,27 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useContentStore } from '@/store/useContentStore';
+import type { ReferenceListItem } from '@/types/content';
+
+function ReferenceItemRow({ item, depth = 0 }: { item: ReferenceListItem; depth?: number }) {
+  const hasChildren = item.children && item.children.length > 0;
+  return (
+    <>
+      <div
+        className="bg-surface-container-low rounded-2xl p-4 flex items-center gap-3"
+        style={depth > 0 ? { marginLeft: `${depth * 20}px` } : undefined}
+      >
+        {item.emoji && <span className="text-lg">{item.emoji}</span>}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-on-surface">{item.label}</p>
+          {item.notes && <p className="text-xs text-on-surface-variant mt-0.5">{item.notes}</p>}
+        </div>
+      </div>
+      {hasChildren && item.children!.map(child => (
+        <ReferenceItemRow key={child.id} item={child} depth={depth + 1} />
+      ))}
+    </>
+  );
+}
 
 export function ReferenceListViewPage() {
   const { id } = useParams<{ id: string }>();
@@ -31,13 +53,7 @@ export function ReferenceListViewPage() {
 
       <div className="flex flex-col gap-2">
         {list.items.map(item => (
-          <div key={item.id} className="bg-surface-container-low rounded-2xl p-4 flex items-center gap-3">
-            {item.emoji && <span className="text-lg">{item.emoji}</span>}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-on-surface">{item.label}</p>
-              {item.notes && <p className="text-xs text-on-surface-variant mt-0.5">{item.notes}</p>}
-            </div>
-          </div>
+          <ReferenceItemRow key={item.id} item={item} />
         ))}
         {list.items.length === 0 && (
           <p className="text-center text-on-surface-variant py-12">This list is empty</p>
