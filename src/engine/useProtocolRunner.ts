@@ -189,6 +189,12 @@ export function useProtocolRunner(allProtocols: Record<string, Protocol>) {
     }
   }, [currentNode, advance]);
 
+  const completeReferenceListLink = useCallback(() => {
+    if (currentNode?.type === 'reference-list-link') {
+      advance(currentNode.nextNodeId);
+    }
+  }, [currentNode, advance]);
+
   const selectWeatherOption = useCallback((nextNodeId: string) => {
     advance(nextNodeId);
   }, [advance]);
@@ -238,6 +244,7 @@ export function useProtocolRunner(allProtocols: Record<string, Protocol>) {
     completeChecklist,
     completeTimer,
     completeInfo,
+    completeReferenceListLink,
     selectWeatherOption,
     stopEarly,
     reset,

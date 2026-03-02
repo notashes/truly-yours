@@ -6,6 +6,7 @@ export const cleaningProtocol: Protocol = {
   emoji: '🧹',
   description: 'Step-by-step cleaning guide',
   color: 'teal',
+  source: 'default',
   startNodeId: 'start',
   subProtocolIds: ['laundry', 'shopping'],
   nodes: {

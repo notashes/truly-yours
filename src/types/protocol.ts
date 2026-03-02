@@ -1,4 +1,6 @@
-export type NodeType = 'question' | 'instruction' | 'checklist' | 'timer' | 'info' | 'weather-question';
+import type { ContentSource } from './content';
+
+export type NodeType = 'question' | 'instruction' | 'checklist' | 'timer' | 'info' | 'weather-question' | 'reference-list-link';
 
 export interface QuestionOption {
   label: string;
@@ -63,13 +65,20 @@ export interface WeatherQuestionNode extends BaseNode {
   fallbackNextNodeId: string;
 }
 
+export interface ReferenceListLinkNode extends BaseNode {
+  type: 'reference-list-link';
+  referenceListId: string;
+  nextNodeId: string | null;
+}
+
 export type ProtocolNode =
   | QuestionNode
   | InstructionNode
   | ChecklistNode
   | TimerNode
   | InfoNode
-  | WeatherQuestionNode;
+  | WeatherQuestionNode
+  | ReferenceListLinkNode;
 
 export interface Protocol {
   id: string;
@@ -80,4 +89,9 @@ export interface Protocol {
   startNodeId: string;
   nodes: Record<string, ProtocolNode>;
   subProtocolIds?: string[];
+  source?: ContentSource;
+  baseProtocolId?: string;
+  isSubProtocol?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }

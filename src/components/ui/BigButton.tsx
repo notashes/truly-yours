@@ -3,9 +3,10 @@ interface BigButtonProps {
   children: React.ReactNode;
   variant?: 'primary' | 'secondary' | 'gentle';
   className?: string;
+  disabled?: boolean;
 }
 
-export function BigButton({ onClick, children, variant = 'primary', className = '' }: BigButtonProps) {
+export function BigButton({ onClick, children, variant = 'primary', className = '', disabled = false }: BigButtonProps) {
   const base = 'min-h-14 w-full px-8 rounded-full text-base font-semibold tracking-wide transition-all active:scale-[0.97] cursor-pointer ripple';
 
   const variants = {
@@ -15,7 +16,7 @@ export function BigButton({ onClick, children, variant = 'primary', className = 
   };
 
   return (
-    <button onClick={onClick} className={`${base} ${variants[variant]} ${className}`}>
+    <button onClick={onClick} disabled={disabled} className={`${base} ${variants[variant]} ${className} ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
       {children}
     </button>
   );

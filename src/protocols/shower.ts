@@ -6,6 +6,7 @@ export const showerProtocol: Protocol = {
   emoji: '🚿',
   description: 'Gentle shower guide',
   color: 'blue',
+  source: 'default',
   startNodeId: 'start',
   nodes: {
     start: {

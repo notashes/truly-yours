@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { protocols } from '@/protocols';
+import { useContentStore } from '@/store/useContentStore';
 import { useProtocolRunner } from '@/engine/useProtocolRunner';
 import { useHistory } from '@/hooks/useHistory';
 import { Header } from '@/components/layout/Header';
@@ -10,14 +10,16 @@ import { QuestionNodeComponent } from '@/components/nodes/QuestionNode';
 import { ChecklistNodeComponent } from '@/components/nodes/ChecklistNode';
 import { TimerNodeComponent } from '@/components/nodes/TimerNode';
 import { WeatherNodeComponent } from '@/components/nodes/WeatherNode';
-import type { InfoNode, InstructionNode, QuestionNode, ChecklistNode, TimerNode, WeatherQuestionNode } from '@/types/protocol';
+import { ReferenceListLinkNodeComponent } from '@/components/nodes/ReferenceListLinkNode';
+import type { InfoNode, InstructionNode, QuestionNode, ChecklistNode, TimerNode, WeatherQuestionNode, ReferenceListLinkNode } from '@/types/protocol';
 
 export function ProtocolRunnerPage() {
   const { protocolId } = useParams<{ protocolId: string }>();
   const navigate = useNavigate();
   const { addRun } = useHistory();
+  const { allProtocols, allReferenceLists } = useContentStore();
 
-  const runner = useProtocolRunner(protocols);
+  const runner = useProtocolRunner(allProtocols);
 
   useEffect(() => {
     if (protocolId && runner.status === 'idle') {
@@ -42,7 +44,7 @@ export function ProtocolRunnerPage() {
   if (!runner.currentNode) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-warm-gray">Loading...</p>
+        <p className="text-on-surface-variant">Loading...</p>
       </div>
     );
   }
@@ -88,6 +90,13 @@ export function ProtocolRunnerPage() {
         )}
         {runner.currentNode.type === 'weather-question' && (
           <WeatherNodeComponent node={runner.currentNode as WeatherQuestionNode} onSelect={runner.selectWeatherOption} />
+        )}
+        {runner.currentNode.type === 'reference-list-link' && (
+          <ReferenceListLinkNodeComponent
+            node={runner.currentNode as ReferenceListLinkNode}
+            referenceList={allReferenceLists[(runner.currentNode as ReferenceListLinkNode).referenceListId]}
+            onComplete={runner.completeReferenceListLink}
+          />
         )}
       </div>
     </div>

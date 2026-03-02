@@ -6,6 +6,7 @@ export const whatToWearProtocol: Protocol = {
   emoji: '👗',
   description: 'Weather-based outfit picker',
   color: 'pink',
+  source: 'default',
   startNodeId: 'start',
   nodes: {
     start: {

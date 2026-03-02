@@ -1,12 +1,13 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { Celebration } from '@/components/ui/Celebration';
 import { BigButton } from '@/components/ui/BigButton';
-import { protocols } from '@/protocols';
+import { useContentStore } from '@/store/useContentStore';
 
 export function CompletionPage() {
   const navigate = useNavigate();
   const { protocolId } = useParams<{ protocolId: string }>();
-  const protocol = protocolId ? protocols[protocolId] : null;
+  const { allProtocols } = useContentStore();
+  const protocol = protocolId ? allProtocols[protocolId] : null;
 
   return (
     <div className="min-h-full flex flex-col items-center justify-center px-6 py-12 bg-surface">

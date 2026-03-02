@@ -6,6 +6,7 @@ export const bedtimeProtocol: Protocol = {
   emoji: '🌙',
   description: 'Wind down for sleep',
   color: 'indigo',
+  source: 'default',
   startNodeId: 'start',
   nodes: {
     start: {

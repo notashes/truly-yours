@@ -6,6 +6,7 @@ export const energyProtocol: Protocol = {
   emoji: '⚡',
   description: 'Match activity to your energy',
   color: 'purple',
+  source: 'default',
   startNodeId: 'start',
   nodes: {
     start: {

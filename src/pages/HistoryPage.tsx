@@ -1,8 +1,9 @@
 import { useHistory } from '@/hooks/useHistory';
-import { protocols } from '@/protocols';
+import { useContentStore } from '@/store/useContentStore';
 
 export function HistoryPage() {
   const { runs } = useHistory();
+  const { allProtocols } = useContentStore();
 
   return (
     <div className="px-5 pt-12 pb-6">
@@ -19,7 +20,7 @@ export function HistoryPage() {
       ) : (
         <div className="flex flex-col gap-2">
           {runs.map(run => {
-            const protocol = protocols[run.protocolId];
+            const protocol = allProtocols[run.protocolId];
             const date = new Date(run.startedAt);
 
             return (

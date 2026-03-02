@@ -6,6 +6,8 @@ export const laundryProtocol: Protocol = {
   emoji: '🧺',
   description: 'Get those clothes clean',
   color: 'cyan',
+  source: 'default',
+  isSubProtocol: true,
   startNodeId: 'start',
   nodes: {
     start: {

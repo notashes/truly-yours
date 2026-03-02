@@ -7,7 +7,8 @@ import { whatToWearProtocol } from './what-to-wear';
 import { laundryProtocol } from './sub/laundry';
 import { shoppingProtocol } from './sub/shopping';
 
-export const protocols: Record<string, Protocol> = {
+// Default protocols shipped with the app (read-only)
+export const defaultProtocols: Record<string, Protocol> = {
   [showerProtocol.id]: showerProtocol,
   [bedtimeProtocol.id]: bedtimeProtocol,
   [cleaningProtocol.id]: cleaningProtocol,
@@ -16,6 +17,9 @@ export const protocols: Record<string, Protocol> = {
   [laundryProtocol.id]: laundryProtocol,
   [shoppingProtocol.id]: shoppingProtocol,
 };
+
+// Keep the old export for backward compatibility during transition
+export const protocols = defaultProtocols;
 
 // Only show these on the home page (not sub-protocols)
 export const mainProtocols = [

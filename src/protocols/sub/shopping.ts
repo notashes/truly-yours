@@ -6,6 +6,8 @@ export const shoppingProtocol: Protocol = {
   emoji: '🛒',
   description: 'Get the food you need',
   color: 'green',
+  source: 'default',
+  isSubProtocol: true,
   startNodeId: 'start',
   nodes: {
     start: {

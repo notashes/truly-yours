@@ -94,6 +94,11 @@ body {
   to { transform: scale(4); opacity: 0; }
 }
 
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
 .animate-fade-in {
   animation: fade-in-up 0.35s cubic-bezier(0.2, 0, 0, 1) both;
 }
