@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useCallback, type ReactNode } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { protocols as defaultProtocolsMap, mainProtocols as defaultMainProtocols } from '@/protocols';
+import { PALETTE_STORAGE_KEY, applyPalette, type PaletteId } from '@/lib/theme';
 import type { Protocol } from '@/types/protocol';
 import type { ReferenceList, StandaloneChecklist, Mode } from '@/types/content';
 
@@ -204,6 +205,7 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
       ty_modes: modes,
       ty_active_mode: activeModeId,
       ty_default_protocol_order: defaultProtocolOrder,
+      ty_active_palette: localStorage.getItem(PALETTE_STORAGE_KEY) || null,
       ty_history: JSON.parse(localStorage.getItem('ty_history') || '[]'),
       ty_moods: JSON.parse(localStorage.getItem('ty_moods') || '[]'),
     }, null, 2);
@@ -219,6 +221,10 @@ export function ContentStoreProvider({ children }: { children: ReactNode }) {
       if (data.ty_modes) setModes(data.ty_modes);
       if (data.ty_active_mode !== undefined) setActiveModeId(data.ty_active_mode);
       if (data.ty_default_protocol_order) setDefaultProtocolOrder(data.ty_default_protocol_order);
+      if (data.ty_active_palette) {
+        localStorage.setItem(PALETTE_STORAGE_KEY, data.ty_active_palette);
+        applyPalette(data.ty_active_palette as PaletteId);
+      }
       if (data.ty_history) localStorage.setItem('ty_history', JSON.stringify(data.ty_history));
       if (data.ty_moods) localStorage.setItem('ty_moods', JSON.stringify(data.ty_moods));
       return true;

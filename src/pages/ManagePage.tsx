@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useContentStore } from '@/store/useContentStore';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import { PALETTES, applyPalette, savePaletteId, getStoredPaletteId, type PaletteId } from '@/lib/theme';
 
 type Tab = 'protocols' | 'checklists' | 'lists' | 'modes';
 
@@ -20,6 +21,7 @@ export function ManagePage() {
   const [showCreate, setShowCreate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ type: string; id: string; name: string } | null>(null);
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [activePalette, setActivePalette] = useState<PaletteId>(getStoredPaletteId);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const allProtoList = Object.values(allProtocols).filter(p => !p.isSubProtocol);
@@ -274,6 +276,57 @@ export function ManagePage() {
           ))}
         </div>
       )}
+
+      {/* Theme */}
+      <div className="mt-10 pt-6 border-t border-outline-variant">
+        <h2 className="text-sm font-semibold text-on-surface mb-3">Theme</h2>
+        <div className="grid grid-cols-2 gap-3">
+          {PALETTES.map(palette => {
+            const isActive = palette.id === activePalette;
+            const swatches = [
+              palette.colors['primary'],
+              palette.colors['secondary'],
+              palette.colors['tertiary'],
+              palette.colors['surface-dim'],
+              palette.colors['primary-container'],
+            ];
+            return (
+              <button
+                key={palette.id}
+                onClick={() => {
+                  setActivePalette(palette.id);
+                  savePaletteId(palette.id);
+                  applyPalette(palette.id);
+                }}
+                className={`rounded-2xl p-4 text-left transition-all
+                  ${isActive
+                    ? 'bg-primary-container ring-2 ring-primary'
+                    : 'bg-surface-container-low hover:bg-surface-container'}`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg">{palette.emoji}</span>
+                  <span className="text-sm font-medium text-on-surface flex-1">{palette.name}</span>
+                  {isActive && (
+                    <svg className="w-5 h-5 text-primary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                  )}
+                </div>
+                <p className="text-xs text-on-surface-variant mb-3">{palette.description}</p>
+                <div className="flex gap-1.5">
+                  {swatches.map((color, i) => (
+                    <div
+                      key={i}
+                      className="w-6 h-6 rounded-full border border-black/10"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Backup / Restore */}
       <div className="mt-10 pt-6 border-t border-outline-variant">

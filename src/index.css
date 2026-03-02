@@ -1,34 +1,33 @@
 @import "tailwindcss";
 
 @theme {
-  /* AuDHD-friendly warm earth palette
-     Research: warm neutrals + muted earth tones reduce sensory overload
-     Grandgeorge & Masataka 2016, Nature 2025, Heerwagen & Gregory 2008 */
-  --color-surface: #FDF8F3;
-  --color-surface-dim: #EDE7E0;
-  --color-surface-container: #F3ECE4;
-  --color-surface-container-low: #F8F2EB;
-  --color-surface-container-high: #E8E1D8;
-  --color-surface-variant: #DED7CD;
+  /* Default: Sage Garden — green is #1 ASD-preferred color
+     Research: Grandgeorge & Masataka 2016, Heerwagen & Gregory 2008
+     Palette can be overridden at runtime via src/lib/theme.ts */
+  --color-surface: #F6F8F3;
+  --color-surface-dim: #E3E8DC;
+  --color-surface-container: #EBF0E4;
+  --color-surface-container-low: #F1F5EB;
+  --color-surface-container-high: #DFE5D7;
+  --color-surface-variant: #D4DCCC;
 
-  --color-primary: #C07A5F;
-  --color-primary-light: #F0D5C7;
-  --color-primary-container: #FADDD0;
+  --color-primary: #7B9B7B;
+  --color-primary-light: #C8DCC8;
+  --color-primary-container: #D8ECD8;
   --color-on-primary: #FFFFFF;
-  --color-on-primary-container: #351208;
+  --color-on-primary-container: #0E2410;
 
-  --color-secondary: #8B6F5E;
-  --color-secondary-container: #F2DDD4;
-  --color-on-secondary-container: #2A1912;
+  --color-secondary: #6B7F6B;
+  --color-secondary-container: #D4E4D4;
+  --color-on-secondary-container: #142014;
 
-  /* Warm umber — replaces yellow-gold (yellow is #1 avoided ASD color) */
-  --color-tertiary: #7D6B50;
-  --color-tertiary-container: #E8D9C4;
+  --color-tertiary: #6B7A5E;
+  --color-tertiary-container: #D6E2C8;
 
-  --color-on-surface: #1C1B18;
-  --color-on-surface-variant: #4A4740;
-  --color-outline: #7B7770;
-  --color-outline-variant: #CCC6BD;
+  --color-on-surface: #1A1C18;
+  --color-on-surface-variant: #434840;
+  --color-outline: #747970;
+  --color-outline-variant: #C4CABC;
 
   --color-success: #3B6939;
   --color-success-container: #BCEDB6;
