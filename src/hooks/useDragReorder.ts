@@ -20,6 +20,19 @@ interface DragState {
 const LONG_PRESS_MS = 500;
 const GAP = 12; // matches Tailwind gap-3
 
+// Pull-to-refresh prevention — module-level to avoid adding hooks
+function preventTouchDefault(e: TouchEvent) { e.preventDefault(); }
+function lockOverscroll() {
+  document.body.style.overscrollBehaviorY = 'contain';
+  document.documentElement.style.overscrollBehaviorY = 'contain';
+  window.addEventListener('touchmove', preventTouchDefault, { passive: false });
+}
+function unlockOverscroll() {
+  document.body.style.overscrollBehaviorY = '';
+  document.documentElement.style.overscrollBehaviorY = '';
+  window.removeEventListener('touchmove', preventTouchDefault);
+}
+
 // Smooth spring with slight overshoot — feels bouncy and alive
 const SPRING = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
 // Smooth deceleration for displaced items sliding into place
@@ -173,6 +186,10 @@ export function useDragReorder<T>({ items, columns, onReorder, getId, enabled, o
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
+      // Long press was cancelled (tap or short hold) — unlock unless in edit mode
+      if (!isDraggingRef.current) {
+        unlockOverscroll();
+      }
     }
 
     window.removeEventListener('pointermove', handlePointerMove);
@@ -212,6 +229,7 @@ export function useDragReorder<T>({ items, columns, onReorder, getId, enabled, o
         resetItemTransforms();
         isDraggingRef.current = false;
         draggedEl.current = null;
+        unlockOverscroll();
 
         setDragState({
           isDragging: false,
@@ -224,6 +242,7 @@ export function useDragReorder<T>({ items, columns, onReorder, getId, enabled, o
     } else {
       isDraggingRef.current = false;
       draggedEl.current = null;
+      unlockOverscroll();
       setDragState({
         isDragging: false,
         draggedId: null,
@@ -272,6 +291,9 @@ export function useDragReorder<T>({ items, columns, onReorder, getId, enabled, o
     pointerStart.current = { x: e.clientX, y: e.clientY };
     pointerCurrent.current = { x: e.clientX, y: e.clientY };
 
+    // Lock immediately to prevent pull-to-refresh during long press or drag
+    lockOverscroll();
+
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
     window.addEventListener('pointercancel', handlePointerUp);
@@ -292,6 +314,7 @@ export function useDragReorder<T>({ items, columns, onReorder, getId, enabled, o
     return () => {
       if (longPressTimer.current) clearTimeout(longPressTimer.current);
       cancelAnimationFrame(animFrameId.current);
+      unlockOverscroll();
     };
   }, []);
 
